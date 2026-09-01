@@ -1,4 +1,4 @@
-import { toPng } from 'html-to-image';
+import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
 import { ChecklistTemplate } from '../types';
 
@@ -74,37 +74,26 @@ export function calculateKpiFromScores(
 
 export async function exportElementToPDF(elementId: string, fileName: string) {
   const element = document.getElementById(elementId);
-  if (!element) return;
-
-  const clone = element.cloneNode(true) as HTMLElement;
-  clone.style.position = 'fixed';
-  clone.style.top = '0';
-  clone.style.left = '-9999px';
-  clone.style.width = '780px';
-  clone.style.height = 'auto';
-  clone.style.maxHeight = 'none';
-  clone.style.overflow = 'visible';
-  clone.style.transform = 'none';
-  clone.style.zoom = '1';
-  clone.style.zIndex = '999999';
-  document.body.appendChild(clone);
+  if (!element) {
+    console.error(`Element #${elementId} not found`);
+    return;
+  }
 
   try {
-    const cloneHeight = Math.max(clone.scrollHeight, clone.offsetHeight);
-    const dataUrl = await toPng(clone, {
-      pixelRatio: 2,
+    const canvas = await html2canvas(element, {
+      scale: 2,
+      useCORS: true,
+      allowTaint: true,
       backgroundColor: '#ffffff',
-      cacheBust: true,
-      width: 780,
-      height: cloneHeight,
-      style: {
-        transform: 'none',
-        zoom: '1',
+      logging: false,
+      onclone: (_clonedDoc, clonedElement) => {
+        // Ensure element is styled clearly for export
+        clonedElement.style.maxWidth = '780px';
+        clonedElement.style.margin = '0 auto';
       },
     });
-    if (document.body.contains(clone)) {
-      document.body.removeChild(clone);
-    }
+
+    const dataUrl = canvas.toDataURL('image/png', 1.0);
 
     const pdf = new jsPDF({
       orientation: 'portrait',
@@ -112,33 +101,40 @@ export async function exportElementToPDF(elementId: string, fileName: string) {
       format: 'a4',
     });
 
-    const imgProps = pdf.getImageProperties(dataUrl);
     const pdfPageWidth = pdf.internal.pageSize.getWidth(); // 210mm
     const pdfPageHeight = pdf.internal.pageSize.getHeight(); // 297mm
 
-    // Margins: 10mm around
-    const marginX = 10;
-    const marginY = 10;
-    const printableWidth = pdfPageWidth - marginX * 2; // 190mm
-    const printableHeight = pdfPageHeight - marginY * 2; // 277mm
+    // Margins: 8mm around
+    const marginX = 8;
+    const marginY = 8;
+    const printableWidth = pdfPageWidth - marginX * 2; // 194mm
+    const printableHeight = pdfPageHeight - marginY * 2; // 281mm
 
-    let imgWidth = printableWidth;
-    let imgHeight = (imgProps.height * printableWidth) / imgProps.width;
+    const imgWidth = printableWidth;
+    const imgHeight = (canvas.height * printableWidth) / canvas.width;
 
-    if (imgHeight > printableHeight) {
-      imgHeight = printableHeight;
-      imgWidth = (imgProps.width * printableHeight) / imgProps.height;
+    if (imgHeight <= printableHeight) {
+      // Single page document
+      const yOffset = marginY + Math.max(0, (printableHeight - imgHeight) / 6);
+      pdf.addImage(dataUrl, 'PNG', marginX, yOffset, imgWidth, imgHeight, undefined, 'FAST');
+    } else {
+      // Multi-page document support
+      let remainingHeight = imgHeight;
+      let positionY = marginY;
+
+      pdf.addImage(dataUrl, 'PNG', marginX, positionY, imgWidth, imgHeight, undefined, 'FAST');
+      remainingHeight -= printableHeight;
+
+      while (remainingHeight > 0) {
+        pdf.addPage();
+        positionY -= printableHeight;
+        pdf.addImage(dataUrl, 'PNG', marginX, positionY, imgWidth, imgHeight, undefined, 'FAST');
+        remainingHeight -= printableHeight;
+      }
     }
 
-    const xOffset = marginX + (printableWidth - imgWidth) / 2;
-    const yOffset = marginY;
-
-    pdf.addImage(dataUrl, 'PNG', xOffset, yOffset, imgWidth, imgHeight);
     pdf.save(fileName.endsWith('.pdf') ? fileName : `${fileName}.pdf`);
   } catch (err) {
-    if (document.body.contains(clone)) {
-      document.body.removeChild(clone);
-    }
     console.error('Lỗi khi xuất PDF:', err);
     window.print();
   }
@@ -146,46 +142,31 @@ export async function exportElementToPDF(elementId: string, fileName: string) {
 
 export async function exportElementToPNG(elementId: string, fileName: string) {
   const element = document.getElementById(elementId);
-  if (!element) return;
-
-  const clone = element.cloneNode(true) as HTMLElement;
-  clone.style.position = 'fixed';
-  clone.style.top = '0';
-  clone.style.left = '-9999px';
-  clone.style.width = '780px';
-  clone.style.height = 'auto';
-  clone.style.maxHeight = 'none';
-  clone.style.overflow = 'visible';
-  clone.style.transform = 'none';
-  clone.style.zoom = '1';
-  clone.style.zIndex = '999999';
-  document.body.appendChild(clone);
+  if (!element) {
+    console.error(`Element #${elementId} not found`);
+    return;
+  }
 
   try {
-    const cloneHeight = Math.max(clone.scrollHeight, clone.offsetHeight);
-    const dataUrl = await toPng(clone, {
-      pixelRatio: 2.5,
+    const canvas = await html2canvas(element, {
+      scale: 2.5,
+      useCORS: true,
+      allowTaint: true,
       backgroundColor: '#ffffff',
-      cacheBust: true,
-      width: 780,
-      height: cloneHeight,
-      style: {
-        transform: 'none',
-        zoom: '1',
+      logging: false,
+      onclone: (_clonedDoc, clonedElement) => {
+        clonedElement.style.maxWidth = '780px';
+        clonedElement.style.margin = '0 auto';
       },
     });
-    if (document.body.contains(clone)) {
-      document.body.removeChild(clone);
-    }
+
+    const dataUrl = canvas.toDataURL('image/png', 1.0);
 
     const link = document.createElement('a');
     link.download = fileName.endsWith('.png') ? fileName : `${fileName}.png`;
     link.href = dataUrl;
     link.click();
   } catch (err) {
-    if (document.body.contains(clone)) {
-      document.body.removeChild(clone);
-    }
     console.error('Lỗi khi xuất PNG:', err);
   }
 }
