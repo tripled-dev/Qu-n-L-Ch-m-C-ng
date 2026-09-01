@@ -98,13 +98,26 @@ export function sanitizeTimesheetEntry(t: TimesheetEntry): TimesheetEntry {
     month = date.substring(0, 7);
   }
 
+  let quantity = Number(t.quantity) || 0;
+  let rate = Number(t.rate) || 0;
+  let unit = (t.unit || '').trim();
+
+  // Backward compatibility: Handle old spreadsheet schema where Column H was 'rate' and Column I was 'amount'
+  // The new GAS script reads Column H as 'unit' and Column I as 'rate'.
+  // If 'unit' is a string containing a valid large number (e.g. "500000"), it is actually the legacy rate.
+  if (!isNaN(Number(unit)) && Number(unit) > 0 && String(unit).match(/^[0-9]+$/)) {
+    rate = Number(unit);
+    unit = 'Buổi'; // Default fallback unit
+  }
+
   return {
     ...t,
     month,
     date,
     staffId: (t.staffId || '').trim(),
-    quantity: Number(t.quantity) || 0,
-    rate: Number(t.rate) || 0,
+    quantity,
+    rate,
+    unit
   };
 }
 
