@@ -17,6 +17,77 @@ export interface GoogleSheetsPayload {
   lastUpdated?: string;
 }
 
+// Helper function to sanitize and normalize staff data
+export function sanitizeStaff(s: Staff): Staff {
+  let roles = s.roles;
+  if (!roles || !Array.isArray(roles) || roles.length === 0) {
+    if (typeof s.roleType === 'string' && (s.roleType as string).includes(',')) {
+      roles = (s.roleType as string).split(',').map(r => r.trim() as any);
+    } else if (s.roleType) {
+      roles = [s.roleType];
+    } else {
+      roles = ['giang_vien'];
+    }
+  }
+
+  let assignedChecklistIds = s.assignedChecklistIds;
+  if (!assignedChecklistIds || !Array.isArray(assignedChecklistIds) || assignedChecklistIds.length === 0) {
+    const defaultIds: string[] = [];
+    if (roles.includes('giang_vien')) defaultIds.push('chk_day_hoc', 'chk_soan_bai');
+    if (roles.includes('tro_giang')) defaultIds.push('chk_tro_giang');
+    if (roles.includes('cham_thi')) defaultIds.push('chk_cham_thi');
+    if (roles.includes('tro_ly')) defaultIds.push('chk_tro_ly');
+    assignedChecklistIds = Array.from(new Set(defaultIds));
+  }
+
+  return {
+    ...s,
+    roleType: roles[0] || s.roleType || 'giang_vien',
+    roles,
+    assignedChecklistIds,
+  };
+}
+
+// Helper function to sanitize and normalize timesheet entries
+export function sanitizeTimesheetEntry(t: TimesheetEntry): TimesheetEntry {
+  let month = (t.month || '').trim();
+  let date = (t.date || '').trim();
+
+  // Normalize DD/MM/YYYY -> YYYY-MM-DD
+  if (date.includes('/')) {
+    const parts = date.split('/');
+    if (parts.length === 3) {
+      const d = parts[0].padStart(2, '0');
+      const m = parts[1].padStart(2, '0');
+      const y = parts[2];
+      if (y.length === 4) date = `${y}-${m}-${d}`;
+    }
+  }
+
+  // Normalize MM/YYYY or M/YYYY -> YYYY-MM
+  if (month.includes('/')) {
+    const mParts = month.split('/');
+    if (mParts.length === 2) {
+      const m = mParts[0].padStart(2, '0');
+      const y = mParts[1];
+      if (y.length === 4) month = `${y}-${m}`;
+    }
+  }
+
+  if ((!month || month.length !== 7 || !month.includes('-')) && date.length >= 7 && date.includes('-')) {
+    month = date.substring(0, 7);
+  }
+
+  return {
+    ...t,
+    month,
+    date,
+    staffId: (t.staffId || '').trim(),
+    quantity: Number(t.quantity) || 0,
+    rate: Number(t.rate) || 0,
+  };
+}
+
 export const GOOGLE_APPS_SCRIPT_TEMPLATE = `/**
  * =========================================================================
  * TRIPLE D - GOOGLE APPS SCRIPT ĐỒNG BỘ DỮ LIỆU BẢNG LƯƠNG & CHẤM CÔNG
@@ -125,15 +196,36 @@ function readAllDataFromSheets(ss) {
     result.staffList = staffRows.map(function(r, index) {
       var ratesObj = {};
       try {
-        if (r[15]) ratesObj = JSON.parse(r[15]);
+        if (r[15]) {
+          ratesObj = typeof r[15] === 'string' ? JSON.parse(r[15]) : r[15];
+        }
       } catch(e) {}
+      
+      var rawRoleType = String(r[4] || 'giang_vien');
+      var rolesArr = [];
+      if (ratesObj._roles && Array.isArray(ratesObj._roles) && ratesObj._roles.length > 0) {
+        rolesArr = ratesObj._roles;
+      } else if (rawRoleType.indexOf(',') !== -1) {
+        rolesArr = rawRoleType.split(',').map(function(s) { return s.trim(); });
+      } else if (rawRoleType) {
+        rolesArr = [rawRoleType];
+      } else {
+        rolesArr = ['giang_vien'];
+      }
+
+      var assignedChecklistsArr = [];
+      if (ratesObj._assignedChecklistIds && Array.isArray(ratesObj._assignedChecklistIds) && ratesObj._assignedChecklistIds.length > 0) {
+        assignedChecklistsArr = ratesObj._assignedChecklistIds;
+      }
       
       return {
         id: String(r[0]) || ('staff_' + (index + 1)),
         code: String(r[1] || ''),
         fullName: String(r[2] || ''),
         role: String(r[3] || 'Thành Viên'),
-        roleType: String(r[4] || 'giang_vien'),
+        roleType: rolesArr[0] || 'giang_vien',
+        roles: rolesArr,
+        assignedChecklistIds: assignedChecklistsArr,
         departmentId: String(r[5] || 'day_hoc'),
         departmentName: String(r[6] || 'Dạy Học'),
         division: String(r[7] || 'CHUYEN_MON'),
@@ -159,11 +251,47 @@ function readAllDataFromSheets(ss) {
   if (sheetTs && sheetTs.getLastRow() > 1) {
     var tsRows = sheetTs.getRange(2, 1, sheetTs.getLastRow() - 1, sheetTs.getLastColumn()).getValues();
     result.timesheetEntries = tsRows.map(function(r, index) {
-      var dateStr = r[3] instanceof Date ? Utilities.formatDate(r[3], "GMT+7", "yyyy-MM-dd") : String(r[3] || '');
+      var dateVal = r[3];
+      var dateStr = '';
+      if (dateVal instanceof Date) {
+        dateStr = Utilities.formatDate(dateVal, "GMT+7", "yyyy-MM-dd");
+      } else {
+        dateStr = String(dateVal || '').trim();
+        if (dateStr.indexOf('/') !== -1) {
+          var parts = dateStr.split('/');
+          if (parts.length === 3) {
+            var day = parts[0].padStart(2, '0');
+            var month = parts[1].padStart(2, '0');
+            var year = parts[2];
+            if (year.length === 4) dateStr = year + '-' + month + '-' + day;
+          }
+        }
+      }
+
+      var monthVal = r[2];
+      var monthStr = '';
+      if (monthVal instanceof Date) {
+        monthStr = Utilities.formatDate(monthVal, "GMT+7", "yyyy-MM");
+      } else {
+        monthStr = String(monthVal || '').trim();
+        if (monthStr.indexOf('/') !== -1) {
+          var mParts = monthStr.split('/');
+          if (mParts.length === 2) {
+            var mMonth = mParts[0].padStart(2, '0');
+            var mYear = mParts[1];
+            if (mYear.length === 4) monthStr = mYear + '-' + mMonth;
+          }
+        }
+      }
+
+      if ((!monthStr || monthStr.length !== 7 || monthStr.indexOf('-') === -1) && dateStr.length >= 7 && dateStr.indexOf('-') !== -1) {
+        monthStr = dateStr.substring(0, 7);
+      }
+
       return {
         id: String(r[0]) || ('ts_' + (index + 1)),
-        staffId: String(r[1] || ''),
-        month: String(r[2] || ''),
+        staffId: String(r[1] || '').trim(),
+        month: monthStr,
         date: dateStr,
         type: String(r[4] || 'teaching_session'),
         label: String(r[5] || ''),
@@ -181,16 +309,37 @@ function readAllDataFromSheets(ss) {
   if (sheetEval && sheetEval.getLastRow() > 1) {
     var evalRows = sheetEval.getRange(2, 1, sheetEval.getLastRow() - 1, sheetEval.getLastColumn()).getValues();
     result.evaluations = evalRows.map(function(r, index) {
-      var dateStr = r[4] instanceof Date ? Utilities.formatDate(r[4], "GMT+7", "yyyy-MM-dd") : String(r[4] || '');
+      var dateVal = r[4];
+      var dateStr = '';
+      if (dateVal instanceof Date) {
+        dateStr = Utilities.formatDate(dateVal, "GMT+7", "yyyy-MM-dd");
+      } else {
+        dateStr = String(dateVal || '').trim();
+      }
+
+      var monthVal = r[2];
+      var monthStr = '';
+      if (monthVal instanceof Date) {
+        monthStr = Utilities.formatDate(monthVal, "GMT+7", "yyyy-MM");
+      } else {
+        monthStr = String(monthVal || '').trim();
+      }
+
+      if ((!monthStr || monthStr.length !== 7 || monthStr.indexOf('-') === -1) && dateStr.length >= 7 && dateStr.indexOf('-') !== -1) {
+        monthStr = dateStr.substring(0, 7);
+      }
+
       var scoresObj = {};
       try {
-        if (r[7]) scoresObj = JSON.parse(r[7]);
+        if (r[7]) {
+          scoresObj = typeof r[7] === 'string' ? JSON.parse(r[7]) : r[7];
+        }
       } catch(e) {}
       
       return {
         id: String(r[0]) || ('eval_' + (index + 1)),
-        staffId: String(r[1] || ''),
-        month: String(r[2] || ''),
+        staffId: String(r[1] || '').trim(),
+        month: monthStr,
         templateId: String(r[3] || 'chk_day_hoc'),
         evaluationDate: dateStr,
         evaluatorName: String(r[5] || ''),
@@ -242,12 +391,21 @@ function writeAllDataToSheets(ss, data) {
   
   if (data.staffList && data.staffList.length > 0) {
     var staffData = data.staffList.map(function(s) {
+      var ratesPayload = Object.assign({}, s.rates || {});
+      if (s.roles && Array.isArray(s.roles)) {
+        ratesPayload._roles = s.roles;
+      }
+      if (s.assignedChecklistIds && Array.isArray(s.assignedChecklistIds)) {
+        ratesPayload._assignedChecklistIds = s.assignedChecklistIds;
+      }
+      var roleTypeStr = (s.roles && s.roles.length > 0) ? s.roles.join(',') : (s.roleType || 'giang_vien');
+
       return [
         s.id || '',
         s.code || '',
         s.fullName || '',
         s.role || '',
-        s.roleType || '',
+        roleTypeStr,
         s.departmentId || '',
         s.departmentName || '',
         s.division || '',
@@ -258,7 +416,7 @@ function writeAllDataToSheets(ss, data) {
         s.email || '',
         s.baseRate || 0,
         s.isActive ? true : false,
-        JSON.stringify(s.rates || {})
+        JSON.stringify(ratesPayload)
       ];
     });
     sheetStaff.getRange(2, 1, staffData.length, staffHeaders.length).setValues(staffData);
@@ -437,6 +595,12 @@ export async function fetchFromGoogleSheet(
 
     const resJson = await response.json();
     if (resJson.status === 'success' && resJson.data) {
+      if (Array.isArray(resJson.data.staffList)) {
+        resJson.data.staffList = resJson.data.staffList.map(s => sanitizeStaff(s));
+      }
+      if (Array.isArray(resJson.data.timesheetEntries)) {
+        resJson.data.timesheetEntries = resJson.data.timesheetEntries.map(t => sanitizeTimesheetEntry(t));
+      }
       return {
         success: true,
         data: resJson.data,

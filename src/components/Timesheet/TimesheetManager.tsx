@@ -71,7 +71,7 @@ export const TimesheetManager: React.FC = () => {
   // Aggregate monthly workload per staff according to the 5 standard items
   const staffWorkloadMatrix = useMemo(() => {
     return staffList.filter(s => s.isActive).map(staff => {
-      const staffLogs = monthTimesheets.filter(t => t.staffId === staff.id);
+      const staffLogs = monthTimesheets.filter(t => t.staffId === staff.id || (staff.code && t.staffId === staff.code));
       const rates = getStaffDutyRates(staff);
       const roleType = resolveStaffRoleType(staff);
       const isTeacher = hasStaffRole(staff, 'giang_vien');
@@ -92,11 +92,11 @@ export const TimesheetManager: React.FC = () => {
       const bonusQty = bonusLogs.reduce((sum, t) => sum + (t.quantity * t.rate || t.rate || t.quantity), 0);
 
       // Existing slip bonus
-      const existingSlip = payrollSlips.find(p => p.staffId === staff.id && p.month === currentMonth);
+      const existingSlip = payrollSlips.find(p => (p.staffId === staff.id || (staff.code && p.staffCode === staff.code)) && p.month === currentMonth);
       const totalBonus = (existingSlip?.generalBonus ?? 0) + bonusQty;
 
       // Evaluation info
-      const staffEvaluations = evaluations.filter(e => e.staffId === staff.id && e.month === currentMonth);
+      const staffEvaluations = evaluations.filter(e => (e.staffId === staff.id || (staff.code && e.staffId === staff.code)) && e.month === currentMonth);
       
       const roleMeta = STAFF_ROLE_DEFINITIONS[roleType] || STAFF_ROLE_DEFINITIONS.giang_vien;
       const assignedChecklists = getStaffAssignedChecklists(staff, checklistTemplates);

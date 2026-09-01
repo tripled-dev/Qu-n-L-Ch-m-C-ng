@@ -22,6 +22,8 @@ import {
   fetchFromGoogleSheet,
   pushToGoogleSheet,
   clearGoogleSheetData,
+  sanitizeStaff,
+  sanitizeTimesheetEntry,
   FIXED_GOOGLE_APPS_SCRIPT_URL,
 } from '../utils/googleSheetsSync';
 import { ConfirmDialog } from '../components/Common/ConfirmDialog';
@@ -390,7 +392,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           }
         }
 
-        const staffEvals = curEvals.filter(e => e.staffId === staff.id && e.month === month);
+        const staffEvals = curEvals.filter(e => (e.staffId === staff.id || (staff.code && e.staffId === staff.code)) && e.month === month);
         if (staffEvals.length > 0) {
           return staffEvals[0].calculatedTotalKpi;
         }
@@ -404,7 +406,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
       // Filter staff timesheets for this month
       const staffTimesheets = curTimesheets.filter(
-        t => t.staffId === staff.id && t.month === month
+        t => (t.staffId === staff.id || (staff.code && t.staffId === staff.code)) && t.month === month
       );
 
       // Helper to group timesheet items by label & rate for exact workload transparency
@@ -879,11 +881,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           // Staff List
           const rawSheetStaff = Array.isArray(result.data.staffList) ? result.data.staffList : [];
           if (rawSheetStaff.length > 0 || staffListRef.current.length > 0) {
-            const { merged: mergedStaff, hasPreservedLocal: staffPreserved } = mergeStaffLists(
+            const { merged: mergedStaffRaw, hasPreservedLocal: staffPreserved } = mergeStaffLists(
               rawSheetStaff,
               staffListRef.current,
               hasPendingEdits
             );
+            const mergedStaff = mergedStaffRaw.map(s => sanitizeStaff(s));
             setStaffList(mergedStaff);
             staffListRef.current = mergedStaff;
             if (staffPreserved) shouldAutoPushLocalData = true;
@@ -892,11 +895,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           // Timesheet Entries
           const rawSheetTs = Array.isArray(result.data.timesheetEntries) ? result.data.timesheetEntries : [];
           if (rawSheetTs.length > 0 || timesheetEntriesRef.current.length > 0) {
-            const { merged: mergedTs, hasPreservedLocal: tsPreserved } = mergeTimesheets(
+            const { merged: mergedTsRaw, hasPreservedLocal: tsPreserved } = mergeTimesheets(
               rawSheetTs,
               timesheetEntriesRef.current,
               hasPendingEdits
             );
+            const mergedTs = mergedTsRaw.map(t => sanitizeTimesheetEntry(t));
             setTimesheetEntries(mergedTs);
             timesheetEntriesRef.current = mergedTs;
             if (tsPreserved) shouldAutoPushLocalData = true;
@@ -924,6 +928,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             setChecklistTemplates(result.data.checklistTemplates);
             checklistTemplatesRef.current = result.data.checklistTemplates;
           }
+
+          // Recalculate payroll to sync monthly totals
+          generateMonthlyPayrollForStaff(currentMonth);
 
           const now = new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
           setLastSyncTime(now);
