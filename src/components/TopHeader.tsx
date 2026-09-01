@@ -54,8 +54,8 @@ export const TopHeader: React.FC<TopHeaderProps> = ({ onOpenMobileSidebar }) => 
       subtitle: `Văn bản chính thức phân công nhiệm vụ và trách nhiệm nhân sự`,
     },
     gsheet: {
-      title: 'Đồng Bộ Dữ Liệu Google Sheet & Triển Khai GitHub',
-      subtitle: `Lưu trữ tập trung trên đám mây Google Sheet và hướng dẫn deploy web miễn phí`,
+      title: 'Đồng Bộ Dữ Liệu Google Sheet',
+      subtitle: `Lưu trữ tập trung trên đám mây và đồng bộ 2 chiều dữ liệu nhân sự & bảng lương`,
     },
     settings: {
       title: 'Cấu Hình Đơn Vị & Chữ Ký Phê Duyệt',

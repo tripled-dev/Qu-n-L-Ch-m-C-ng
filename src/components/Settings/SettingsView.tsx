@@ -5,7 +5,17 @@ import { Settings, Save, RotateCcw, Download, Upload, ShieldCheck, FileCheck, Tr
 import { ManagerSignatureSvg, FinanceSignatureSvg } from '../../utils/signatures';
 
 export const SettingsView: React.FC = () => {
-  const { orgSettings, updateOrgSettings, resetToSampleData, exportBackupJson, importBackupJson, clearAllSampleData, setActiveTab } = useApp();
+  const { 
+    orgSettings, 
+    updateOrgSettings, 
+    resetToSampleData, 
+    exportBackupJson, 
+    importBackupJson, 
+    clearAllSampleData, 
+    setActiveTab,
+    showConfirm,
+    showToast,
+  } = useApp();
   const [formData, setFormData] = useState<OrgSettings>({ ...orgSettings });
   const [saved, setSaved] = useState(false);
   const managerImgInputRef = React.useRef<HTMLInputElement>(null);
@@ -15,6 +25,7 @@ export const SettingsView: React.FC = () => {
     e.preventDefault();
     updateOrgSettings(formData);
     setSaved(true);
+    showToast('Đã lưu cấu hình đơn vị & chữ ký thành công!', 'success');
     setTimeout(() => setSaved(false), 3000);
   };
 
@@ -25,13 +36,14 @@ export const SettingsView: React.FC = () => {
     const file = e.target.files?.[0];
     if (file) {
       if (file.size > 2 * 1024 * 1024) {
-        alert('Vui lòng chọn ảnh dung lượng dưới 2MB');
+        showToast('Vui lòng chọn ảnh dung lượng dưới 2MB', 'warning');
         return;
       }
       const reader = new FileReader();
       reader.onload = event => {
         const base64 = event.target?.result as string;
         setFormData(prev => ({ ...prev, [field]: base64 }));
+        showToast('Đã tải ảnh chữ ký thành công!', 'success');
       };
       reader.readAsDataURL(file);
     }
@@ -47,10 +59,10 @@ export const SettingsView: React.FC = () => {
         if (content) {
           const success = importBackupJson(content);
           if (success) {
-            alert('Khôi phục dữ liệu thành công!');
-            window.location.reload();
+            showToast('Khôi phục dữ liệu từ file JSON thành công!', 'success');
+            setTimeout(() => window.location.reload(), 800);
           } else {
-            alert('File sao lưu không hợp lệ.');
+            showToast('File sao lưu không hợp lệ.', 'error');
           }
         }
       };
@@ -418,10 +430,17 @@ export const SettingsView: React.FC = () => {
           <button
             type="button"
             onClick={() => {
-              if (confirm('Xóa sạch toàn bộ nhân sự mẫu, bảng công và phiếu lương mẫu để chuẩn bị nhận dữ liệu từ Google Sheet?')) {
-                clearAllSampleData();
-                alert('Đã xóa sạch dữ liệu mẫu!');
-              }
+              showConfirm({
+                title: 'Xác nhận xóa sạch dữ liệu mẫu',
+                message: 'Bạn có chắc chắn muốn xóa toàn bộ nhân sự mẫu, bảng công và phiếu lương mẫu để chuẩn bị nạp dữ liệu thật từ Google Sheet?',
+                confirmText: 'Xóa sạch mẫu',
+                variant: 'danger',
+                icon: 'trash',
+                onConfirm: () => {
+                  clearAllSampleData();
+                  showToast('Đã xóa sạch dữ liệu mẫu!', 'info');
+                },
+              });
             }}
             className="flex items-center gap-1.5 px-4 py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-bold rounded-lg transition-colors cursor-pointer"
           >
@@ -432,9 +451,16 @@ export const SettingsView: React.FC = () => {
           <button
             type="button"
             onClick={() => {
-              if (confirm('Khôi phục lại toàn bộ dữ liệu mẫu chuẩn ban đầu?')) {
-                resetToSampleData();
-              }
+              showConfirm({
+                title: 'Khôi phục dữ liệu mẫu ban đầu',
+                message: 'Thao tác này sẽ đặt lại hệ thống về trạng thái mẫu ban đầu của Triple D. Bạn có muốn tiếp tục?',
+                confirmText: 'Khôi phục mẫu',
+                variant: 'warning',
+                onConfirm: () => {
+                  resetToSampleData();
+                  showToast('Đã khôi phục dữ liệu mẫu ban đầu!', 'success');
+                },
+              });
             }}
             className="flex items-center gap-1.5 px-4 py-2 bg-slate-50 hover:bg-slate-100 text-slate-600 text-xs font-semibold rounded-lg transition-colors cursor-pointer ml-auto"
           >

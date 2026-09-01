@@ -17,8 +17,20 @@ import {
   INITIAL_TIMESHEET_ENTRIES,
 } from '../data/initialData';
 import { getStaffDutyRates, resolveStaffRoleType, hasStaffRole } from '../data/roleDefinitions';
-import { calculateKpiFromScores } from '../utils/formatters';
+import { calculateKpiFromScores, getDefaultSalaryMonth } from '../utils/formatters';
 import { fetchFromGoogleSheet, pushToGoogleSheet } from '../utils/googleSheetsSync';
+import { ConfirmDialog } from '../components/Common/ConfirmDialog';
+import { ToastNotification } from '../components/Common/ToastNotification';
+
+export interface ConfirmModalOptions {
+  title: string;
+  message: React.ReactNode | string;
+  confirmText?: string;
+  cancelText?: string;
+  variant?: 'danger' | 'warning' | 'primary';
+  icon?: 'trash' | 'warning' | 'info';
+  onConfirm: () => void;
+}
 
 interface AppContextType {
   currentMonth: string;
@@ -51,6 +63,10 @@ interface AppContextType {
   syncStatusMessage: { type: 'idle' | 'syncing' | 'success' | 'error'; text: string };
   pullDataFromGoogleSheet: (customUrl?: string) => Promise<{ success: boolean; message: string }>;
   pushDataToGoogleSheet: (customUrl?: string) => Promise<{ success: boolean; message: string }>;
+
+  // Global Dialogs & Notifications
+  showConfirm: (options: ConfirmModalOptions) => void;
+  showToast: (message: string, type?: 'success' | 'error' | 'info' | 'warning') => void;
 
   // CRUD Staff
   addStaff: (staff: Omit<Staff, 'id'>) => void;
@@ -111,7 +127,19 @@ const AppContext = createContext<AppContextType | undefined>(undefined);
 const LOCAL_STORAGE_KEY_PREFIX = 'triple_d_payroll_v3_';
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [currentMonth, setCurrentMonth] = useState<string>('2026-07');
+  // Tự động xác định kỳ lương:
+  // - Nếu ngày <= 15 (nửa đầu tháng): hiển thị kỳ lương tháng trước
+  // - Nếu ngày > 15 (nửa sau tháng): hiển thị kỳ lương tháng hiện tại
+  const [currentMonth, setCurrentMonthState] = useState<string>(() => {
+    const saved = localStorage.getItem(`${LOCAL_STORAGE_KEY_PREFIX}current_month`);
+    return saved || getDefaultSalaryMonth();
+  });
+
+  const setCurrentMonth = (m: string) => {
+    setCurrentMonthState(m);
+    localStorage.setItem(`${LOCAL_STORAGE_KEY_PREFIX}current_month`, m);
+  };
+
   const [activeTab, setActiveTab] = useState<string>('payroll');
   
   const [searchQuery, setSearchQuery] = useState<string>('');
@@ -119,6 +147,74 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const [selectedSlip, setSelectedSlip] = useState<MonthlyPayrollSlip | null>(null);
   const [selectedStaffForEval, setSelectedStaffForEval] = useState<Staff | null>(null);
+
+  // Global Dialog State
+  const [confirmDialogState, setConfirmDialogState] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: React.ReactNode | string;
+    confirmText?: string;
+    cancelText?: string;
+    variant?: 'danger' | 'warning' | 'primary';
+    icon?: 'trash' | 'warning' | 'info';
+    onConfirm: () => void;
+  }>({
+    isOpen: false,
+    title: '',
+    message: '',
+    onConfirm: () => {},
+  });
+
+  // Global Toast State
+  const [toastState, setToastState] = useState<{
+    isOpen: boolean;
+    message: string;
+    type: 'success' | 'error' | 'info' | 'warning';
+  }>({
+    isOpen: false,
+    message: '',
+    type: 'success',
+  });
+
+  const toastTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  const showConfirm = (options: ConfirmModalOptions) => {
+    setConfirmDialogState({
+      isOpen: true,
+      title: options.title,
+      message: options.message,
+      confirmText: options.confirmText,
+      cancelText: options.cancelText,
+      variant: options.variant || 'primary',
+      icon: options.icon,
+      onConfirm: options.onConfirm,
+    });
+  };
+
+  const closeConfirm = () => {
+    setConfirmDialogState((prev) => ({ ...prev, isOpen: false }));
+  };
+
+  const showToast = (message: string, type: 'success' | 'error' | 'info' | 'warning' = 'success') => {
+    if (toastTimerRef.current) {
+      clearTimeout(toastTimerRef.current);
+    }
+    setToastState({
+      isOpen: true,
+      message,
+      type,
+    });
+    toastTimerRef.current = setTimeout(() => {
+      setToastState((prev) => ({ ...prev, isOpen: false }));
+    }, 3800);
+  };
+
+  const closeToast = () => {
+    if (toastTimerRef.current) {
+      clearTimeout(toastTimerRef.current);
+    }
+    setToastState((prev) => ({ ...prev, isOpen: false }));
+  };
 
   // Load from local storage or fallback to initial data
   const [staffList, setStaffList] = useState<Staff[]>(() => {
@@ -1026,6 +1122,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         getStaffEvaluationForMonth,
         updateChecklistTemplate,
         updateOrgSettings,
+        showConfirm,
+        showToast,
         clearAllSampleData,
         resetToSampleData,
         exportBackupJson,
@@ -1034,6 +1132,23 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }}
     >
       {children}
+      <ConfirmDialog
+        isOpen={confirmDialogState.isOpen}
+        title={confirmDialogState.title}
+        message={confirmDialogState.message}
+        confirmText={confirmDialogState.confirmText}
+        cancelText={confirmDialogState.cancelText}
+        variant={confirmDialogState.variant}
+        icon={confirmDialogState.icon}
+        onConfirm={confirmDialogState.onConfirm}
+        onCancel={closeConfirm}
+      />
+      <ToastNotification
+        isOpen={toastState.isOpen}
+        message={toastState.message}
+        type={toastState.type}
+        onClose={closeToast}
+      />
     </AppContext.Provider>
   );
 };

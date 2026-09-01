@@ -28,7 +28,8 @@ export const KpiEvaluatorModal: React.FC<KpiEvaluatorModalProps> = ({ initialSta
     checklistTemplates, 
     currentMonth, 
     saveEvaluation, 
-    getStaffEvaluationForMonth 
+    getStaffEvaluationForMonth,
+    showToast,
   } = useApp();
 
   const [selectedStaffId, setSelectedStaffId] = useState<string>(
@@ -122,7 +123,7 @@ export const KpiEvaluatorModal: React.FC<KpiEvaluatorModalProps> = ({ initialSta
       linkedSoanBaiScore: calculatedSoanBaiScore,
     });
 
-    alert(`Đã lưu đánh giá KPI: ${totalKpi}% cho nhân sự ${currentStaff.fullName}. Điểm đã tự động cập nhật vào phiếu lương tháng ${formatMonthDisplay(currentMonth)}!`);
+    showToast(`Đã lưu đánh giá KPI: ${totalKpi}% cho nhân sự ${currentStaff.fullName}. Đã cập nhật vào phiếu lương tháng ${formatMonthDisplay(currentMonth)}!`, 'success');
     onClose();
   };
 

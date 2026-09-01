@@ -51,6 +51,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
     importBackupJson,
     resetToSampleData,
     orgSettings,
+    showConfirm,
+    showToast,
   } = useApp();
 
   const fileInputRef = React.useRef<HTMLInputElement>(null);
@@ -95,9 +97,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
         if (content) {
           const success = importBackupJson(content);
           if (success) {
-            alert('Khôi phục dữ liệu thành công!');
+            showToast('Khôi phục dữ liệu từ file sao lưu thành công!', 'success');
           } else {
-            alert('File sao lưu không hợp lệ.');
+            showToast('File sao lưu không hợp lệ.', 'error');
           }
         }
       };
@@ -161,7 +163,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
       items: [
         {
           id: 'gsheet',
-          name: 'Đồng Bộ Google Sheet & GitHub',
+          name: 'Đồng Bộ Google Sheet',
           icon: FileSpreadsheet,
           badge: 'Cloud Sync',
           badgeColor: 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30',
@@ -387,12 +389,19 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   />
                   <button
                     onClick={() => {
-                      if (confirm('Khôi phục lại dữ liệu mẫu gốc Triple D?')) {
-                        resetToSampleData();
-                      }
+                      showConfirm({
+                        title: 'Khôi phục dữ liệu mẫu gốc',
+                        message: 'Bạn có chắc muốn khôi phục lại dữ liệu mẫu gốc ban đầu của Triple D?',
+                        confirmText: 'Khôi phục mẫu',
+                        variant: 'warning',
+                        onConfirm: () => {
+                          resetToSampleData();
+                          showToast('Đã khôi phục dữ liệu mẫu gốc!', 'success');
+                        },
+                      });
                     }}
                     title="Đặt lại dữ liệu gốc"
-                    className="p-1.5 text-slate-400 hover:text-red-400 hover:bg-slate-800 rounded-md transition-colors"
+                    className="p-1.5 text-slate-400 hover:text-amber-400 hover:bg-slate-800 rounded-md transition-colors"
                   >
                     <RotateCcw className="w-3.5 h-3.5" />
                   </button>

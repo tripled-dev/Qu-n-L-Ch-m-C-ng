@@ -31,7 +31,7 @@ interface PayslipModalProps {
 }
 
 export const PayslipModal: React.FC<PayslipModalProps> = ({ slip, onClose }) => {
-  const { savePayrollSlip, updateSlipStatus, orgSettings } = useApp();
+  const { savePayrollSlip, updateSlipStatus, orgSettings, showToast } = useApp();
   const [isEditing, setIsEditing] = useState(false);
   const [editedSlip, setEditedSlip] = useState<MonthlyPayrollSlip>({ ...slip });
   const [copied, setCopied] = useState(false);
@@ -46,7 +46,7 @@ export const PayslipModal: React.FC<PayslipModalProps> = ({ slip, onClose }) => 
     const file = e.target.files?.[0];
     if (file) {
       if (file.size > 2 * 1024 * 1024) {
-        alert('Vui lòng chọn ảnh dung lượng dưới 2MB');
+        showToast('Vui lòng chọn ảnh dung lượng dưới 2MB', 'warning');
         return;
       }
       const reader = new FileReader();
@@ -59,6 +59,7 @@ export const PayslipModal: React.FC<PayslipModalProps> = ({ slip, onClose }) => 
             [field]: base64,
           },
         }));
+        showToast('Đã tải ảnh chữ ký thành công!', 'success');
       };
       reader.readAsDataURL(file);
     }

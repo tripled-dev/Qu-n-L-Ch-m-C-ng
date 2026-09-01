@@ -37,6 +37,8 @@ export const PayrollList: React.FC = () => {
     generateMonthlyPayrollForStaff,
     deletePayrollSlip,
     updateSlipStatus,
+    showConfirm,
+    showToast,
   } = useApp();
 
   const [activeSlip, setActiveSlip] = useState<MonthlyPayrollSlip | null>(null);
@@ -502,9 +504,17 @@ export const PayrollList: React.FC = () => {
                           </button>
                           <button
                             onClick={() => {
-                              if (confirm(`Bạn có chắc chắn muốn xóa phiếu lương của ${slip.staffName}?`)) {
-                                deletePayrollSlip(slip.id);
-                              }
+                              showConfirm({
+                                title: 'Xác nhận xóa phiếu lương',
+                                message: `Bạn có chắc chắn muốn xóa phiếu lương tháng ${formatMonthDisplay(currentMonth)} của ${slip.staffName}?`,
+                                confirmText: 'Xóa phiếu',
+                                variant: 'danger',
+                                icon: 'trash',
+                                onConfirm: () => {
+                                  deletePayrollSlip(slip.id);
+                                  showToast(`Đã xóa phiếu lương của ${slip.staffName}`, 'info');
+                                },
+                              });
                             }}
                             className="p-1 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
                             title="Xóa phiếu lương này"
@@ -676,9 +686,17 @@ export const PayrollList: React.FC = () => {
                           {/* Delete */}
                           <button
                             onClick={() => {
-                              if (confirm(`Bạn có chắc chắn muốn xóa phiếu lương của ${slip.staffName}?`)) {
-                                deletePayrollSlip(slip.id);
-                              }
+                              showConfirm({
+                                title: 'Xác nhận xóa phiếu lương',
+                                message: `Bạn có chắc chắn muốn xóa phiếu lương tháng ${formatMonthDisplay(currentMonth)} của ${slip.staffName}?`,
+                                confirmText: 'Xóa phiếu',
+                                variant: 'danger',
+                                icon: 'trash',
+                                onConfirm: () => {
+                                  deletePayrollSlip(slip.id);
+                                  showToast(`Đã xóa phiếu lương của ${slip.staffName}`, 'info');
+                                },
+                              });
                             }}
                             className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors"
                             title="Xóa phiếu lương này"

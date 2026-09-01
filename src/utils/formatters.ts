@@ -22,6 +22,33 @@ export function formatMonthDisplay(monthStr: string): string {
   return monthStr;
 }
 
+/**
+ * Xác định kỳ lương mặc định theo quy tắc:
+ * - Nếu đang ở nửa đầu tháng hiện tại (ngày 1 - 15): hiển thị kỳ lương tháng trước
+ * - Nếu đang ở nửa sau tháng hiện tại (ngày 16 trở đi): hiển thị kỳ lương tháng hiện tại
+ */
+export function getDefaultSalaryMonth(): string {
+  const now = new Date();
+  const currentYear = now.getFullYear();
+  const currentMonthIndex = now.getMonth(); // 0 to 11 (0 is Jan)
+  const currentDay = now.getDate();
+
+  let targetYear = currentYear;
+  let targetMonth = currentMonthIndex + 1; // 1 to 12
+
+  if (currentDay <= 15) {
+    // Nửa đầu tháng -> lấy kỳ lương tháng trước
+    targetMonth -= 1;
+    if (targetMonth < 1) {
+      targetMonth = 12;
+      targetYear -= 1;
+    }
+  }
+
+  const mm = targetMonth < 10 ? `0${targetMonth}` : `${targetMonth}`;
+  return `${targetYear}-${mm}`;
+}
+
 export function calculateKpiFromScores(
   template: ChecklistTemplate,
   scores: Record<string, number>,
