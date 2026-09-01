@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
 import { GOOGLE_APPS_SCRIPT_TEMPLATE, FIXED_GOOGLE_APPS_SCRIPT_URL } from '../../utils/googleSheetsSync';
+import { ClearSheetDataModal } from '../Common/ClearSheetDataModal';
 import {
   FileSpreadsheet,
   CloudDownload,
@@ -19,7 +20,8 @@ import {
   Users,
   CalendarCheck,
   Receipt,
-  RefreshCw
+  RefreshCw,
+  ShieldAlert,
 } from 'lucide-react';
 
 export const GoogleSheetsIntegration: React.FC = () => {
@@ -30,6 +32,7 @@ export const GoogleSheetsIntegration: React.FC = () => {
     syncStatusMessage,
     pullDataFromGoogleSheet,
     pushDataToGoogleSheet,
+    wipeGoogleSheetAndLocalData,
     clearAllSampleData,
     resetToSampleData,
     staffList,
@@ -43,6 +46,7 @@ export const GoogleSheetsIntegration: React.FC = () => {
   const [copiedScript, setCopiedScript] = useState(false);
   const [copiedUrl, setCopiedUrl] = useState(false);
   const [showCodePreview, setShowCodePreview] = useState(false);
+  const [showClearSheetModal, setShowClearSheetModal] = useState(false);
 
   const activeUrl = googleSheetUrl || FIXED_GOOGLE_APPS_SCRIPT_URL;
 
@@ -229,26 +233,38 @@ export const GoogleSheetsIntegration: React.FC = () => {
         </div>
 
         <div className="pt-3 border-t border-slate-100 flex flex-wrap items-center justify-between gap-3">
-          <button
-            type="button"
-            onClick={() => {
-              showConfirm({
-                title: 'Xóa sạch dữ liệu mẫu',
-                message: 'Bạn có chắc chắn muốn xóa toàn bộ nhân sự mẫu, bảng công và phiếu lương mẫu để chuẩn bị nạp dữ liệu thật từ Google Sheet?',
-                confirmText: 'Xóa sạch mẫu',
-                variant: 'danger',
-                icon: 'trash',
-                onConfirm: () => {
-                  clearAllSampleData();
-                  showToast('Đã xóa sạch dữ liệu mẫu!', 'info');
-                },
-              });
-            }}
-            className="flex items-center gap-1.5 px-4 py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-bold rounded-xl transition-colors cursor-pointer"
-          >
-            <Trash2 className="w-4 h-4 text-rose-600" />
-            <span>Xóa Sạch Dữ Liệu Mẫu</span>
-          </button>
+          <div className="flex items-center gap-2 flex-wrap">
+            <button
+              id="open-clear-sheet-password-modal-btn"
+              type="button"
+              onClick={() => setShowClearSheetModal(true)}
+              className="flex items-center gap-1.5 px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold rounded-xl transition-all shadow-sm shadow-rose-600/20 cursor-pointer"
+            >
+              <ShieldAlert className="w-4 h-4 text-white" />
+              <span>Xóa Hết Dữ Liệu Từ Sheet (Pass: 260606)</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                showConfirm({
+                  title: 'Làm sạch dữ liệu hiển thị trên ứng dụng',
+                  message: 'Bạn có chắc chắn muốn dọn sạch bảng tạm trên web để chuẩn bị nạp lại từ Google Sheet?',
+                  confirmText: 'Làm sạch giao diện',
+                  variant: 'warning',
+                  icon: 'trash',
+                  onConfirm: () => {
+                    clearAllSampleData();
+                    showToast('Đã làm sạch dữ liệu hiển thị trên ứng dụng!', 'info');
+                  },
+                });
+              }}
+              className="flex items-center gap-1.5 px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-medium rounded-xl transition-colors cursor-pointer"
+            >
+              <Trash2 className="w-3.5 h-3.5 text-slate-500" />
+              <span>Làm Sạch Dữ Liệu Tạm</span>
+            </button>
+          </div>
 
           <button
             type="button"
@@ -308,6 +324,20 @@ export const GoogleSheetsIntegration: React.FC = () => {
           )}
         </div>
       </div>
+
+      {/* Modal Xóa Toàn Bộ Dữ Liệu Sheet có bảo mật mật khẩu 260606 */}
+      <ClearSheetDataModal
+        isOpen={showClearSheetModal}
+        onClose={() => setShowClearSheetModal(false)}
+        onConfirmClear={async () => {
+          const res = await wipeGoogleSheetAndLocalData(activeUrl);
+          if (res.success) {
+            showToast(res.message || 'Đã xóa toàn bộ dữ liệu trên Google Sheet và ứng dụng!', 'success');
+          } else {
+            showToast(res.message || 'Lỗi khi xóa dữ liệu trên Google Sheet.', 'error');
+          }
+        }}
+      />
     </div>
   );
 };

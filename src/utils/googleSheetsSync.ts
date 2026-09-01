@@ -86,6 +86,14 @@ function doPost(e) {
       })).setMimeType(ContentService.MimeType.JSON);
     }
     
+    if (action === 'clearAll') {
+      clearAllSheetsData(ss);
+      return ContentService.createTextOutput(JSON.stringify({
+        status: 'success',
+        message: 'Đã xóa toàn bộ dữ liệu trên các Sheet thành công!'
+      })).setMimeType(ContentService.MimeType.JSON);
+    }
+    
     return ContentService.createTextOutput(JSON.stringify({
       status: 'error',
       message: 'Hành động không hợp lệ: ' + action
@@ -369,6 +377,17 @@ function writeAllDataToSheets(ss, data) {
   }
 }
 
+// 3. XÓA TOÀN BỘ DỮ LIỆU TRÊN CÁC SHEETS (GIỮ NGUYÊN TIÊU ĐỀ)
+function clearAllSheetsData(ss) {
+  var sheetNames = ['NhanSu', 'ChamCong', 'DanhGiaKPI', 'PhieuLuong'];
+  for (var i = 0; i < sheetNames.length; i++) {
+    var sheet = ss.getSheetByName(sheetNames[i]);
+    if (sheet && sheet.getLastRow() > 1) {
+      sheet.getRange(2, 1, sheet.getLastRow() - 1, sheet.getLastColumn()).clearContent();
+    }
+  }
+}
+
 function getOrCreateSheet(ss, name) {
   var sheet = ss.getSheetByName(name);
   if (!sheet) {
@@ -486,3 +505,57 @@ export async function pushToGoogleSheet(
     };
   }
 }
+
+export async function clearGoogleSheetData(
+  webAppUrl: string = FIXED_GOOGLE_APPS_SCRIPT_URL
+): Promise<{ success: boolean; message: string }> {
+  try {
+    const cleanUrl = (webAppUrl || FIXED_GOOGLE_APPS_SCRIPT_URL).trim();
+    if (!cleanUrl.startsWith('http')) {
+      return { success: false, message: 'URL Ứng dụng web Google Apps Script không hợp lệ' };
+    }
+
+    // Pass empty payload as fallback if legacy script, plus action: clearAll
+    const bodyData = {
+      action: 'clearAll',
+      data: {
+        staffList: [],
+        timesheetEntries: [],
+        evaluations: [],
+        payrollSlips: [],
+      },
+    };
+
+    const response = await fetch(cleanUrl, {
+      method: 'POST',
+      body: JSON.stringify(bodyData),
+      headers: {
+        'Content-Type': 'text/plain;charset=utf-8',
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`Máy chủ Google phản hồi mã lỗi HTTP ${response.status}`);
+    }
+
+    const resJson = await response.json();
+    if (resJson.status === 'success') {
+      return {
+        success: true,
+        message: resJson.message || 'Đã xóa toàn bộ dữ liệu trên Google Sheet thành công!',
+      };
+    } else {
+      return {
+        success: false,
+        message: resJson.message || 'Google Sheet từ chối xóa dữ liệu.',
+      };
+    }
+  } catch (err: any) {
+    console.error('Clear Google Sheet failed:', err);
+    return {
+      success: false,
+      message: `Lỗi khi xóa dữ liệu trên Google Sheet: ${err.message || 'Vui lòng kiểm tra kết nối.'}`,
+    };
+  }
+}
+

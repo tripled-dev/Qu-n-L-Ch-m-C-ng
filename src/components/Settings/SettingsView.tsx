@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
 import { OrgSettings } from '../../types';
-import { Settings, Save, RotateCcw, Download, Upload, ShieldCheck, FileCheck, Trash2, Image as ImageIcon, FileSpreadsheet, ArrowRight } from 'lucide-react';
+import { Settings, Save, RotateCcw, Download, Upload, ShieldCheck, FileCheck, Trash2, Image as ImageIcon, FileSpreadsheet, ArrowRight, ShieldAlert } from 'lucide-react';
 import { ManagerSignatureSvg, FinanceSignatureSvg } from '../../utils/signatures';
+import { ClearSheetDataModal } from '../Common/ClearSheetDataModal';
 
 export const SettingsView: React.FC = () => {
   const { 
@@ -11,13 +12,16 @@ export const SettingsView: React.FC = () => {
     resetToSampleData, 
     exportBackupJson, 
     importBackupJson, 
-    clearAllSampleData, 
+    clearAllSampleData,
+    wipeGoogleSheetAndLocalData,
+    googleSheetUrl,
     setActiveTab,
     showConfirm,
     showToast,
   } = useApp();
   const [formData, setFormData] = useState<OrgSettings>({ ...orgSettings });
   const [saved, setSaved] = useState(false);
+  const [showClearSheetModal, setShowClearSheetModal] = useState(false);
   const managerImgInputRef = React.useRef<HTMLInputElement>(null);
   const financeImgInputRef = React.useRef<HTMLInputElement>(null);
 
@@ -391,12 +395,21 @@ export const SettingsView: React.FC = () => {
 
           <button
             type="button"
+            onClick={() => setShowClearSheetModal(true)}
+            className="flex items-center gap-1.5 px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold rounded-lg transition-colors cursor-pointer shadow-sm shadow-rose-600/20"
+          >
+            <ShieldAlert className="w-4 h-4 text-white" />
+            <span>Xóa Hết Dữ Liệu Sheet (Pass: 260606)</span>
+          </button>
+
+          <button
+            type="button"
             onClick={() => {
               showConfirm({
                 title: 'Xác nhận xóa sạch dữ liệu mẫu',
                 message: 'Bạn có chắc chắn muốn xóa toàn bộ nhân sự mẫu, bảng công và phiếu lương mẫu để chuẩn bị nạp dữ liệu thật từ Google Sheet?',
                 confirmText: 'Xóa sạch mẫu',
-                variant: 'danger',
+                variant: 'warning',
                 icon: 'trash',
                 onConfirm: () => {
                   clearAllSampleData();
@@ -407,7 +420,7 @@ export const SettingsView: React.FC = () => {
             className="flex items-center gap-1.5 px-4 py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-bold rounded-lg transition-colors cursor-pointer"
           >
             <Trash2 className="w-4 h-4 text-rose-600" />
-            <span>Xóa Sạch Dữ Liệu Mẫu</span>
+            <span>Xóa Dữ Liệu Tạm</span>
           </button>
 
           <button
@@ -432,6 +445,19 @@ export const SettingsView: React.FC = () => {
         </div>
       </div>
 
+      {/* Modal Xóa Toàn Bộ Dữ Liệu Sheet có mật khẩu bảo vệ */}
+      <ClearSheetDataModal
+        isOpen={showClearSheetModal}
+        onClose={() => setShowClearSheetModal(false)}
+        onConfirmClear={async () => {
+          const res = await wipeGoogleSheetAndLocalData(googleSheetUrl);
+          if (res.success) {
+            showToast(res.message || 'Đã xóa toàn bộ dữ liệu trên Google Sheet và ứng dụng!', 'success');
+          } else {
+            showToast(res.message || 'Lỗi khi xóa dữ liệu trên Google Sheet.', 'error');
+          }
+        }}
+      />
     </div>
   );
 };

@@ -21,6 +21,7 @@ import { calculateKpiFromScores, getDefaultSalaryMonth } from '../utils/formatte
 import {
   fetchFromGoogleSheet,
   pushToGoogleSheet,
+  clearGoogleSheetData,
   FIXED_GOOGLE_APPS_SCRIPT_URL,
 } from '../utils/googleSheetsSync';
 import { ConfirmDialog } from '../components/Common/ConfirmDialog';
@@ -67,6 +68,7 @@ interface AppContextType {
   syncStatusMessage: { type: 'idle' | 'syncing' | 'success' | 'error'; text: string };
   pullDataFromGoogleSheet: (customUrl?: string) => Promise<{ success: boolean; message: string }>;
   pushDataToGoogleSheet: (customUrl?: string) => Promise<{ success: boolean; message: string }>;
+  wipeGoogleSheetAndLocalData: (customUrl?: string) => Promise<{ success: boolean; message: string }>;
 
   // Global Dialogs & Notifications
   showConfirm: (options: ConfirmModalOptions) => void;
@@ -1076,6 +1078,48 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
+  // Wipe all data from Google Sheet and clear local state
+  const wipeGoogleSheetAndLocalData = async (customUrl?: string): Promise<{ success: boolean; message: string }> => {
+    const url = (customUrl || googleSheetUrl).trim();
+    setIsSyncingGoogleSheet(true);
+    setSyncStatusMessage({ type: 'syncing', text: 'Đang gửi yêu cầu xóa sạch toàn bộ dữ liệu trên Google Sheet...' });
+
+    try {
+      // 1. Clear local state and localStorage first
+      setStaffList([]);
+      setTimesheetEntries([]);
+      setEvaluations([]);
+      setPayrollSlips([]);
+      staffListRef.current = [];
+      timesheetEntriesRef.current = [];
+      evaluationsRef.current = [];
+      payrollSlipsRef.current = [];
+      localStorage.setItem(`${LOCAL_STORAGE_KEY_PREFIX}staff`, JSON.stringify([]));
+      localStorage.setItem(`${LOCAL_STORAGE_KEY_PREFIX}timesheets`, JSON.stringify([]));
+      localStorage.setItem(`${LOCAL_STORAGE_KEY_PREFIX}evaluations`, JSON.stringify([]));
+      localStorage.setItem(`${LOCAL_STORAGE_KEY_PREFIX}slips`, JSON.stringify([]));
+
+      // 2. Clear data on Google Sheet if URL exists
+      if (url) {
+        const result = await clearGoogleSheetData(url);
+        const now = new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        setLastSyncTime(now);
+        localStorage.setItem(`${LOCAL_STORAGE_KEY_PREFIX}last_sync_time`, now);
+        setSyncStatusMessage({ type: 'idle', text: 'Đã xóa toàn bộ dữ liệu trên Google Sheet và ứng dụng web.' });
+        return result;
+      }
+
+      setSyncStatusMessage({ type: 'idle', text: 'Đã xóa toàn bộ dữ liệu trên ứng dụng web.' });
+      return { success: true, message: 'Đã làm sạch toàn bộ dữ liệu thành công!' };
+    } catch (err: any) {
+      const msg = err.message || 'Lỗi khi xóa dữ liệu trên Google Sheet';
+      setSyncStatusMessage({ type: 'error', text: msg });
+      return { success: false, message: msg };
+    } finally {
+      setIsSyncingGoogleSheet(false);
+    }
+  };
+
   // Clear all sample data to start fresh or receive from Google Sheets
   const clearAllSampleData = () => {
     setStaffList([]);
@@ -1202,6 +1246,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         syncStatusMessage,
         pullDataFromGoogleSheet,
         pushDataToGoogleSheet,
+        wipeGoogleSheetAndLocalData,
         addStaff,
         updateStaff,
         deleteStaff,
