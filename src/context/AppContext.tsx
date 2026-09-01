@@ -224,36 +224,58 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // Load from local storage or fallback to initial data
   const [staffList, setStaffList] = useState<Staff[]>(() => {
-    const savedUrl = localStorage.getItem(`${LOCAL_STORAGE_KEY_PREFIX}gsheet_url`);
     const saved = localStorage.getItem(`${LOCAL_STORAGE_KEY_PREFIX}staff`);
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed)) return parsed;
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
       } catch (e) {}
     }
-    // If a Google Sheet URL is configured, do not seed initial sample staff while waiting for fetch
-    return savedUrl && savedUrl.trim() ? [] : INITIAL_STAFF;
+    return INITIAL_STAFF;
   });
 
   const [payrollSlips, setPayrollSlips] = useState<MonthlyPayrollSlip[]>(() => {
     const saved = localStorage.getItem(`${LOCAL_STORAGE_KEY_PREFIX}slips`);
-    return saved ? JSON.parse(saved) : INITIAL_PAYROLL_SLIPS;
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      } catch (e) {}
+    }
+    return INITIAL_PAYROLL_SLIPS;
   });
 
   const [checklistTemplates, setChecklistTemplates] = useState<ChecklistTemplate[]>(() => {
     const saved = localStorage.getItem(`${LOCAL_STORAGE_KEY_PREFIX}templates`);
-    return saved ? JSON.parse(saved) : INITIAL_CHECKLIST_TEMPLATES;
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      } catch (e) {}
+    }
+    return INITIAL_CHECKLIST_TEMPLATES;
   });
 
   const [timesheetEntries, setTimesheetEntries] = useState<TimesheetEntry[]>(() => {
     const saved = localStorage.getItem(`${LOCAL_STORAGE_KEY_PREFIX}timesheets`);
-    return saved ? JSON.parse(saved) : INITIAL_TIMESHEET_ENTRIES;
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      } catch (e) {}
+    }
+    return INITIAL_TIMESHEET_ENTRIES;
   });
 
   const [evaluations, setEvaluations] = useState<KpiEvaluation[]>(() => {
     const saved = localStorage.getItem(`${LOCAL_STORAGE_KEY_PREFIX}evaluations`);
-    return saved ? JSON.parse(saved) : INITIAL_EVALUATIONS;
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      } catch (e) {}
+    }
+    return INITIAL_EVALUATIONS;
   });
 
   const [orgSettings, setOrgSettings] = useState<OrgSettings>(() => {
@@ -280,6 +302,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const markUserEdit = () => {
     hasUserEditedRef.current = true;
+    try {
+      localStorage.setItem(`${LOCAL_STORAGE_KEY_PREFIX}has_pending_edits`, 'true');
+    } catch (e) {}
+  };
+
+  const clearPendingEditsFlag = () => {
+    hasUserEditedRef.current = false;
+    try {
+      localStorage.removeItem(`${LOCAL_STORAGE_KEY_PREFIX}has_pending_edits`);
+    } catch (e) {}
   };
 
   const setGoogleSheetUrl = (url: string) => {
@@ -707,6 +739,126 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     localStorage.setItem(`${LOCAL_STORAGE_KEY_PREFIX}org_settings`, JSON.stringify(orgSettings));
   }, [orgSettings]);
 
+  // Smart merge helpers for initialSync
+  const mergeStaffLists = (sheetStaffs: Staff[], localStaffs: Staff[], preferLocal: boolean) => {
+    const sheetMap = new Map<string, Staff>();
+    sheetStaffs.forEach(s => sheetMap.set(s.id, s));
+
+    let hasPreservedLocal = false;
+    const result: Staff[] = [];
+
+    if (preferLocal) {
+      const localMap = new Map<string, Staff>();
+      localStaffs.forEach(s => localMap.set(s.id, s));
+
+      sheetStaffs.forEach(s => {
+        if (localMap.has(s.id)) {
+          result.push(localMap.get(s.id)!);
+        } else {
+          result.push(s);
+        }
+      });
+
+      localStaffs.forEach(s => {
+        if (!sheetMap.has(s.id)) {
+          result.push(s);
+          hasPreservedLocal = true;
+        }
+      });
+    } else {
+      result.push(...sheetStaffs);
+      localStaffs.forEach(s => {
+        if (!sheetMap.has(s.id)) {
+          result.push(s);
+          hasPreservedLocal = true;
+        }
+      });
+    }
+
+    return { merged: result, hasPreservedLocal };
+  };
+
+  const mergeTimesheets = (sheetEntries: TimesheetEntry[], localEntries: TimesheetEntry[], preferLocal: boolean) => {
+    const sheetMap = new Map<string, TimesheetEntry>();
+    sheetEntries.forEach(e => sheetMap.set(e.id, e));
+
+    let hasPreservedLocal = false;
+    const result: TimesheetEntry[] = [];
+
+    if (preferLocal) {
+      const localMap = new Map<string, TimesheetEntry>();
+      localEntries.forEach(e => localMap.set(e.id, e));
+
+      sheetEntries.forEach(e => {
+        if (localMap.has(e.id)) {
+          result.push(localMap.get(e.id)!);
+        } else {
+          result.push(e);
+        }
+      });
+
+      localEntries.forEach(e => {
+        if (!sheetMap.has(e.id)) {
+          result.push(e);
+          hasPreservedLocal = true;
+        }
+      });
+    } else {
+      result.push(...sheetEntries);
+      localEntries.forEach(e => {
+        if (!sheetMap.has(e.id)) {
+          result.push(e);
+          hasPreservedLocal = true;
+        }
+      });
+    }
+
+    return { merged: result, hasPreservedLocal };
+  };
+
+  const mergeEvaluations = (sheetEvals: KpiEvaluation[], localEvals: KpiEvaluation[], preferLocal: boolean) => {
+    const getEvalKey = (e: KpiEvaluation) => e.id || `${e.staffId}_${e.month}_${e.templateId}`;
+
+    const sheetMap = new Map<string, KpiEvaluation>();
+    sheetEvals.forEach(e => sheetMap.set(getEvalKey(e), e));
+
+    let hasPreservedLocal = false;
+    const result: KpiEvaluation[] = [];
+
+    if (preferLocal) {
+      const localMap = new Map<string, KpiEvaluation>();
+      localEvals.forEach(e => localMap.set(getEvalKey(e), e));
+
+      sheetEvals.forEach(e => {
+        const key = getEvalKey(e);
+        if (localMap.has(key)) {
+          result.push(localMap.get(key)!);
+        } else {
+          result.push(e);
+        }
+      });
+
+      localEvals.forEach(e => {
+        const key = getEvalKey(e);
+        if (!sheetMap.has(key)) {
+          result.push(e);
+          hasPreservedLocal = true;
+        }
+      });
+    } else {
+      result.push(...sheetEvals);
+      localEvals.forEach(e => {
+        const key = getEvalKey(e);
+        if (!sheetMap.has(key)) {
+          result.push(e);
+          hasPreservedLocal = true;
+        }
+      });
+    }
+
+    return { merged: result, hasPreservedLocal };
+  };
+
   // 1. Auto-fetch data from Google Sheet on initial mount if URL is configured
   useEffect(() => {
     let isMounted = true;
@@ -714,27 +866,57 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const url = (localStorage.getItem(`${LOCAL_STORAGE_KEY_PREFIX}gsheet_url`) || googleSheetUrl).trim();
       if (!url || !url.startsWith('http')) {
         isInitialSyncDoneRef.current = true;
-        hasUserEditedRef.current = false;
+        clearPendingEditsFlag();
         return;
       }
       try {
         setSyncStatusMessage({ type: 'syncing', text: 'Đang tự động tải dữ liệu mới nhất từ Google Sheet...' });
         const result = await fetchFromGoogleSheet(url);
         if (isMounted && result.success && result.data) {
-          hasUserEditedRef.current = false;
-          if (result.data.staffList && Array.isArray(result.data.staffList)) {
-            setStaffList(result.data.staffList);
-            staffListRef.current = result.data.staffList;
+          const hasPendingEdits = localStorage.getItem(`${LOCAL_STORAGE_KEY_PREFIX}has_pending_edits`) === 'true';
+          let shouldAutoPushLocalData = hasPendingEdits;
+
+          // Staff List
+          const rawSheetStaff = Array.isArray(result.data.staffList) ? result.data.staffList : [];
+          if (rawSheetStaff.length > 0 || staffListRef.current.length > 0) {
+            const { merged: mergedStaff, hasPreservedLocal: staffPreserved } = mergeStaffLists(
+              rawSheetStaff,
+              staffListRef.current,
+              hasPendingEdits
+            );
+            setStaffList(mergedStaff);
+            staffListRef.current = mergedStaff;
+            if (staffPreserved) shouldAutoPushLocalData = true;
           }
-          if (result.data.timesheetEntries && Array.isArray(result.data.timesheetEntries)) {
-            setTimesheetEntries(result.data.timesheetEntries);
-            timesheetEntriesRef.current = result.data.timesheetEntries;
+
+          // Timesheet Entries
+          const rawSheetTs = Array.isArray(result.data.timesheetEntries) ? result.data.timesheetEntries : [];
+          if (rawSheetTs.length > 0 || timesheetEntriesRef.current.length > 0) {
+            const { merged: mergedTs, hasPreservedLocal: tsPreserved } = mergeTimesheets(
+              rawSheetTs,
+              timesheetEntriesRef.current,
+              hasPendingEdits
+            );
+            setTimesheetEntries(mergedTs);
+            timesheetEntriesRef.current = mergedTs;
+            if (tsPreserved) shouldAutoPushLocalData = true;
           }
-          if (result.data.evaluations && Array.isArray(result.data.evaluations)) {
-            setEvaluations(result.data.evaluations);
-            evaluationsRef.current = result.data.evaluations;
+
+          // Evaluations
+          const rawSheetEval = Array.isArray(result.data.evaluations) ? result.data.evaluations : [];
+          if (rawSheetEval.length > 0 || evaluationsRef.current.length > 0) {
+            const { merged: mergedEval, hasPreservedLocal: evalPreserved } = mergeEvaluations(
+              rawSheetEval,
+              evaluationsRef.current,
+              hasPendingEdits
+            );
+            setEvaluations(mergedEval);
+            evaluationsRef.current = mergedEval;
+            if (evalPreserved) shouldAutoPushLocalData = true;
           }
-          if (result.data.orgSettings && typeof result.data.orgSettings === 'object') {
+
+          // Org Settings & Templates
+          if (result.data.orgSettings && typeof result.data.orgSettings === 'object' && Object.keys(result.data.orgSettings).length > 0) {
             setOrgSettings(result.data.orgSettings);
             orgSettingsRef.current = result.data.orgSettings;
           }
@@ -742,10 +924,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             setChecklistTemplates(result.data.checklistTemplates);
             checklistTemplatesRef.current = result.data.checklistTemplates;
           }
+
           const now = new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
           setLastSyncTime(now);
           localStorage.setItem(`${LOCAL_STORAGE_KEY_PREFIX}last_sync_time`, now);
           setSyncStatusMessage({ type: 'success', text: `Tự động đồng bộ từ Google Sheet lúc ${now}` });
+
+          if (shouldAutoPushLocalData) {
+            hasUserEditedRef.current = true;
+          } else {
+            clearPendingEditsFlag();
+          }
         } else if (isMounted) {
           setSyncStatusMessage({ type: 'error', text: result.message || 'Không thể tải dữ liệu từ Google Sheet' });
         }
@@ -756,7 +945,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         }
       } finally {
         isInitialSyncDoneRef.current = true;
-        hasUserEditedRef.current = false; // Never push on page reload
       }
     };
 
@@ -767,7 +955,34 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
   }, []);
 
-  // 2. Auto-push all modifications directly to Google Apps Script ONLY IF user edited data during this session
+  // Send pending data if user closes/reloads window
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      if (hasUserEditedRef.current && isInitialSyncDoneRef.current) {
+        const url = (localStorage.getItem(`${LOCAL_STORAGE_KEY_PREFIX}gsheet_url`) || googleSheetUrl).trim();
+        if (url && url.startsWith('http')) {
+          const payload = {
+            staffList: staffListRef.current,
+            timesheetEntries: timesheetEntriesRef.current,
+            evaluations: evaluationsRef.current,
+            payrollSlips: payrollSlipsRef.current,
+            orgSettings: orgSettingsRef.current,
+            checklistTemplates: checklistTemplatesRef.current,
+            lastUpdated: new Date().toISOString(),
+          };
+          try {
+            navigator.sendBeacon(url, JSON.stringify({ action: 'writeAll', data: payload }));
+          } catch (e) {}
+        }
+      }
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, [googleSheetUrl]);
+
+  // 2. Auto-push all modifications directly to Google Apps Script ONLY IF user edited data during this session (fast 300ms debounce)
   useEffect(() => {
     if (!isInitialSyncDoneRef.current) return;
     if (!hasUserEditedRef.current) return; // DO NOT PUSH ON RELOAD
@@ -799,7 +1014,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           setLastSyncTime(now);
           localStorage.setItem(`${LOCAL_STORAGE_KEY_PREFIX}last_sync_time`, now);
           setSyncStatusMessage({ type: 'success', text: `Tự động ghi nhận lên Google Sheet lúc ${now}` });
-          hasUserEditedRef.current = false;
+          clearPendingEditsFlag();
         } else {
           setSyncStatusMessage({ type: 'error', text: result.message || 'Lỗi tự động lưu lên Google Sheet' });
         }
@@ -807,7 +1022,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         console.error('Auto sync to Google Sheet error:', err);
         setSyncStatusMessage({ type: 'error', text: 'Không thể kết nối Google Sheet' });
       }
-    }, 1500);
+    }, 300);
 
     return () => {
       if (autoPushTimerRef.current) {
@@ -1066,7 +1281,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         // Recalculate payroll for current month
         generateMonthlyPayrollForStaff(currentMonth);
 
-        hasUserEditedRef.current = false;
+        clearPendingEditsFlag();
         const now = new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
         setLastSyncTime(now);
         localStorage.setItem(`${LOCAL_STORAGE_KEY_PREFIX}last_sync_time`, now);
@@ -1109,7 +1324,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
       const result = await pushToGoogleSheet(url, payload);
       if (result.success) {
-        hasUserEditedRef.current = false;
+        clearPendingEditsFlag();
         const now = new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
         setLastSyncTime(now);
         localStorage.setItem(`${LOCAL_STORAGE_KEY_PREFIX}last_sync_time`, now);
