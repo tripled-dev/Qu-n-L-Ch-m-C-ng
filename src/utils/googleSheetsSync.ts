@@ -53,12 +53,14 @@ export function sanitizeTimesheetEntry(t: TimesheetEntry): TimesheetEntry {
   let month = (t.month || '').trim();
   let date = (t.date || '').trim();
 
-  // Fix timezone shift issue if Google Sheets returns a UTC ISO string (e.g., "2024-04-30T17:00:00.000Z" for May 1st GMT+7)
-  const fixIsoDate = (isoStr: string) => {
-    if (isoStr.includes('T') && isoStr.endsWith('Z')) {
-      const d = new Date(isoStr);
-      // We assume the date was intended for Vietnam time (GMT+7), but it got converted to UTC
-      // Wait, no. If we just create a Date object, its local time will be the user's browser time, which is usually correct if they are in Vietnam.
+  // Robust date parser for ISO strings, "Sat Aug 01 2026 00:00:00 GMT+0700", etc.
+  const parseLenientDate = (dateStr: string) => {
+    if (!dateStr) return null;
+    if (/^\d{4}-\d{2}$/.test(dateStr) || /^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+      return null;
+    }
+    const d = new Date(dateStr);
+    if (!isNaN(d.getTime())) {
       const yyyy = d.getFullYear();
       const mm = String(d.getMonth() + 1).padStart(2, '0');
       const dd = String(d.getDate()).padStart(2, '0');
@@ -67,11 +69,11 @@ export function sanitizeTimesheetEntry(t: TimesheetEntry): TimesheetEntry {
     return null;
   };
 
-  const fixedMonth = fixIsoDate(month);
-  if (fixedMonth) month = fixedMonth.yyyy_mm;
+  const parsedMonth = parseLenientDate(month);
+  if (parsedMonth) month = parsedMonth.yyyy_mm;
 
-  const fixedDate = fixIsoDate(date);
-  if (fixedDate) date = fixedDate.yyyy_mm_dd;
+  const parsedDate = parseLenientDate(date);
+  if (parsedDate) date = parsedDate.yyyy_mm_dd;
 
   // Normalize DD/MM/YYYY -> YYYY-MM-DD
   if (date.includes('/')) {
@@ -115,7 +117,7 @@ export function sanitizeTimesheetEntry(t: TimesheetEntry): TimesheetEntry {
     month,
     date,
     staffId: (t.staffId || '').trim(),
-    type: (t.type || '').trim(),
+    type: ((t.type || '').trim() || 'teaching_session') as TimesheetEntry['type'],
     quantity,
     rate,
     unit
@@ -182,12 +184,15 @@ function doPost(e) {
     }
     
     var action = postData.action || 'writeAll';
+    var targetSheet = postData.targetSheet || null;
     
-    if (action === 'writeAll' && postData.data) {
-      writeAllDataToSheets(ss, postData.data);
+    if ((action === 'writeAll' || action === 'writeSheet' || action === 'writePartial') && postData.data) {
+      writeAllDataToSheets(ss, postData.data, targetSheet);
       return ContentService.createTextOutput(JSON.stringify({
         status: 'success',
-        message: 'Đã lưu và đồng bộ toàn bộ dữ liệu lên Google Sheet thành công!'
+        message: targetSheet 
+          ? 'Đã cập nhật riêng bảng (' + targetSheet + ') lên Google Sheet thành công!' 
+          : 'Đã lưu và đồng bộ toàn bộ dữ liệu lên Google Sheet thành công!'
       })).setMimeType(ContentService.MimeType.JSON);
     }
     
@@ -409,149 +414,190 @@ function readAllDataFromSheets(ss) {
 }
 
 // ==========================================
-// 2. GHI TOÀN BỘ DỮ LIỆU TỪ WEB LÊN GOOGLE SHEET
+// 2. GHI DỮ LIỆU TỪ WEB LÊN GOOGLE SHEET (HỖ TRỢ ĐỒNG BỘ RIÊNG TỪNG SHEET)
 // ==========================================
-function writeAllDataToSheets(ss, data) {
-  // 2.1 Sheet NhanSu
-  var sheetStaff = getOrCreateSheet(ss, 'NhanSu');
-  sheetStaff.clear();
-  var staffHeaders = [
-    'ID', 'Mã NV', 'Họ và Tên', 'Chức Danh', 'Role Type', 'Mã Bộ Phận', 
-    'Tên Bộ Phận', 'Nhánh', 'Số TKNH', 'Ngân Hàng', 'Chủ Tài Khoản', 
-    'SĐT', 'Email', 'Lương Gốc / Đơn Giá', 'Trạng Thái', 'Tùy Biến Đơn Giá (JSON)'
-  ];
-  sheetStaff.appendRow(staffHeaders);
-  formatHeaderRow(sheetStaff, '#1e293b');
-  
-  if (data.staffList && data.staffList.length > 0) {
-    var staffData = data.staffList.map(function(s) {
-      var ratesPayload = Object.assign({}, s.rates || {});
-      if (s.roles && Array.isArray(s.roles)) {
-        ratesPayload._roles = s.roles;
-      }
-      if (s.assignedChecklistIds && Array.isArray(s.assignedChecklistIds)) {
-        ratesPayload._assignedChecklistIds = s.assignedChecklistIds;
-      }
-      var roleTypeStr = (s.roles && s.roles.length > 0) ? s.roles.join(',') : (s.roleType || 'giang_vien');
+function prepareSheet(sheet, headers, bgColor) {
+  if (sheet.getLastRow() === 0) {
+    sheet.appendRow(headers);
+    formatHeaderRow(sheet, bgColor);
+  } else {
+    var lastRow = sheet.getLastRow();
+    var lastCol = Math.max(sheet.getLastColumn(), headers.length);
+    if (lastRow > 1) {
+      sheet.getRange(2, 1, lastRow - 1, lastCol).clearContent();
+    }
+  }
+}
 
-      return [
-        s.id || '',
-        s.code || '',
-        s.fullName || '',
-        s.role || '',
-        roleTypeStr,
-        s.departmentId || '',
-        s.departmentName || '',
-        s.division || '',
-        s.bankAccount || '',
-        s.bankName || '',
-        s.bankOwner || '',
-        s.phone || '',
-        s.email || '',
-        s.baseRate || 0,
-        s.isActive ? true : false,
-        JSON.stringify(ratesPayload)
-      ];
-    });
-    sheetStaff.getRange(2, 1, staffData.length, staffHeaders.length).setValues(staffData);
+function writeAllDataToSheets(ss, data, targetSheet) {
+  // 2.1 Sheet NhanSu
+  if (!targetSheet || targetSheet === 'NhanSu') {
+    var sheetStaff = getOrCreateSheet(ss, 'NhanSu');
+    var staffHeaders = [
+      'ID', 'Mã NV', 'Họ và Tên', 'Chức Danh', 'Role Type', 'Mã Bộ Phận', 
+      'Tên Bộ Phận', 'Nhánh', 'Số TKNH', 'Ngân Hàng', 'Chủ Tài Khoản', 
+      'SĐT', 'Email', 'Lương Gốc / Đơn Giá', 'Trạng Thái', 'Tùy Biến Đơn Giá (JSON)'
+    ];
+    prepareSheet(sheetStaff, staffHeaders, '#1e293b');
+    
+    if (data.staffList && data.staffList.length > 0) {
+      var staffData = data.staffList.map(function(s) {
+        var ratesPayload = Object.assign({}, s.rates || {});
+        if (s.roles && Array.isArray(s.roles)) {
+          ratesPayload._roles = s.roles;
+        }
+        if (s.assignedChecklistIds && Array.isArray(s.assignedChecklistIds)) {
+          ratesPayload._assignedChecklistIds = s.assignedChecklistIds;
+        }
+        var roleTypeStr = (s.roles && s.roles.length > 0) ? s.roles.join(',') : (s.roleType || 'giang_vien');
+
+        return [
+          s.id || '',
+          s.code || '',
+          s.fullName || '',
+          s.role || '',
+          roleTypeStr,
+          s.departmentId || '',
+          s.departmentName || '',
+          s.division || '',
+          s.bankAccount || '',
+          s.bankName || '',
+          s.bankOwner || '',
+          s.phone || '',
+          s.email || '',
+          s.baseRate || 0,
+          s.isActive ? true : false,
+          JSON.stringify(ratesPayload)
+        ];
+      });
+      sheetStaff.getRange(2, 1, staffData.length, staffHeaders.length).setValues(staffData);
+    }
   }
   
   // 2.2 Sheet ChamCong
-  var sheetTs = getOrCreateSheet(ss, 'ChamCong');
-  sheetTs.clear();
-  var tsHeaders = [
-    'ID', 'Mã NV', 'Kỳ Lương (Tháng)', 'Ngày', 'Loại Công Việc', 
-    'Nội Dung / Tên Ca', 'Số Lượng', 'Đơn Vị', 'Đơn Giá (VNĐ)', 'KPI (%)', 'Ghi Chú'
-  ];
-  sheetTs.appendRow(tsHeaders);
-  formatHeaderRow(sheetTs, '#0369a1');
-  
-  if (data.timesheetEntries && data.timesheetEntries.length > 0) {
-    var tsData = data.timesheetEntries.map(function(t) {
-      return [
-        t.id || '',
-        t.staffId || '',
-        t.month || '',
-        t.date || '',
-        t.type || '',
-        t.label || '',
-        t.quantity || 0,
-        t.unit || '',
-        t.rate || 0,
-        t.kpiScore || 100,
-        t.note || ''
-      ];
-    });
-    sheetTs.getRange(2, 1, tsData.length, tsHeaders.length).setValues(tsData);
+  if (!targetSheet || targetSheet === 'ChamCong') {
+    var sheetTs = getOrCreateSheet(ss, 'ChamCong');
+    var tsHeaders = [
+      'ID', 'Mã NV', 'Kỳ Lương (Tháng)', 'Ngày', 'Loại Công Việc', 
+      'Nội Dung / Tên Ca', 'Số Lượng', 'Đơn Vị', 'Đơn Giá (VNĐ)', 'KPI (%)', 'Ghi Chú'
+    ];
+    prepareSheet(sheetTs, tsHeaders, '#0369a1');
+    
+    if (data.timesheetEntries && data.timesheetEntries.length > 0) {
+      var tsData = data.timesheetEntries.map(function(t) {
+        return [
+          t.id || '',
+          t.staffId || '',
+          t.month || '',
+          t.date || '',
+          t.type || '',
+          t.label || '',
+          t.quantity || 0,
+          t.unit || '',
+          t.rate || 0,
+          t.kpiScore || 100,
+          t.note || ''
+        ];
+      });
+      sheetTs.getRange(2, 1, tsData.length, tsHeaders.length).setValues(tsData);
+    }
   }
   
   // 2.3 Sheet DanhGiaKPI
-  var sheetEval = getOrCreateSheet(ss, 'DanhGiaKPI');
-  sheetEval.clear();
-  var evalHeaders = [
-    'ID', 'Mã NV', 'Kỳ Lương (Tháng)', 'Mã Bảng Kiểm', 'Ngày Đánh Giá', 
-    'Người Đánh Giá', 'Tổng Điểm KPI (%)', 'Chi Tiết Điểm Tiêu Chí (JSON)', 'Ghi Chú Đánh Giá'
-  ];
-  sheetEval.appendRow(evalHeaders);
-  formatHeaderRow(sheetEval, '#b45309');
-  
-  if (data.evaluations && data.evaluations.length > 0) {
-    var evalData = data.evaluations.map(function(e) {
-      return [
-        e.id || '',
-        e.staffId || '',
-        e.month || '',
-        e.templateId || '',
-        e.evaluationDate || '',
-        e.evaluatorName || '',
-        e.calculatedTotalKpi || 100,
-        JSON.stringify(e.scores || {}),
-        e.notes || ''
-      ];
-    });
-    sheetEval.getRange(2, 1, evalData.length, evalHeaders.length).setValues(evalData);
+  if (!targetSheet || targetSheet === 'DanhGiaKPI') {
+    var sheetEval = getOrCreateSheet(ss, 'DanhGiaKPI');
+    var evalHeaders = [
+      'ID', 'Mã NV', 'Kỳ Lương (Tháng)', 'Mã Bảng Kiểm', 'Ngày Đánh Giá', 
+      'Người Đánh Giá', 'Tổng Điểm KPI (%)', 'Chi Tiết Điểm Tiêu Chí (JSON)', 'Ghi Chú Đánh Giá'
+    ];
+    prepareSheet(sheetEval, evalHeaders, '#b45309');
+    
+    if (data.evaluations && data.evaluations.length > 0) {
+      var evalData = data.evaluations.map(function(e) {
+        return [
+          e.id || '',
+          e.staffId || '',
+          e.month || '',
+          e.templateId || '',
+          e.evaluationDate || '',
+          e.evaluatorName || '',
+          e.calculatedTotalKpi || 100,
+          JSON.stringify(e.scores || {}),
+          e.notes || ''
+        ];
+      });
+      sheetEval.getRange(2, 1, evalData.length, evalHeaders.length).setValues(evalData);
+    }
   }
   
-  // 2.4 Sheet PhieuLuong (Lưu lại lịch sử phiếu lương)
-  var sheetSlips = getOrCreateSheet(ss, 'PhieuLuong');
-  sheetSlips.clear();
-  var slipHeaders = [
-    'Mã Phiếu', 'Kỳ Lương', 'Mã NV', 'Họ và Tên', 'Bộ Phận', 
-    'Lương Chính (VNĐ)', 'Lương Sản Phẩm LTSP', 'Thưởng (VNĐ)', 'Khấu Trừ (VNĐ)', 
-    'TỔNG THỰC NHẬN (VNĐ)', 'Số TKNH', 'Ngân Hàng', 'Trạng Thái', 'Ngày Cập Nhật'
-  ];
-  sheetSlips.appendRow(slipHeaders);
-  formatHeaderRow(sheetSlips, '#047857');
-  
-  if (data.payrollSlips && data.payrollSlips.length > 0) {
-    var slipData = data.payrollSlips.map(function(s) {
-      var pwTotal = s.pieceworkItems ? s.pieceworkItems.reduce(function(acc, p){ return acc + p.totalAmount; }, 0) : 0;
-      return [
-        s.id || '',
-        s.month || '',
-        s.staffCode || '',
-        s.staffName || '',
-        s.departmentName || '',
-        s.primarySalary ? s.primarySalary.totalAmount : 0,
-        pwTotal,
-        s.generalBonus || 0,
-        s.deductions || 0,
-        s.totalSalary || 0,
-        s.bankAccount || '',
-        s.bankName || '',
-        s.status || 'draft',
-        s.updatedAt || ''
-      ];
-    });
-    sheetSlips.getRange(2, 1, slipData.length, slipHeaders.length).setValues(slipData);
+  // 2.4 Sheet PhieuLuong
+  if (!targetSheet || targetSheet === 'PhieuLuong') {
+    var sheetSlips = getOrCreateSheet(ss, 'PhieuLuong');
+    var slipHeaders = [
+      'Mã Phiếu', 'Kỳ Lương', 'Mã NV', 'Họ và Tên', 'Bộ Phận', 
+      'Lương Chính (VNĐ)', 'Lương Sản Phẩm LTSP', 'Thưởng (VNĐ)', 'Khấu Trừ (VNĐ)', 
+      'TỔNG THỰC NHẬN (VNĐ)', 'Số TKNH', 'Ngân Hàng', 'Trạng Thái', 'Ngày Cập Nhật'
+    ];
+    prepareSheet(sheetSlips, slipHeaders, '#047857');
+    
+    if (data.payrollSlips && data.payrollSlips.length > 0) {
+      var slipMap = {};
+      var uniqueSlips = [];
+      for (var sIdx = 0; sIdx < data.payrollSlips.length; sIdx++) {
+        var sItem = data.payrollSlips[sIdx];
+        if (!sItem) continue;
+        var monthKey = String(sItem.month || '').trim();
+        if (monthKey.length > 7 && monthKey.indexOf('-') !== -1) {
+          monthKey = monthKey.substring(0, 7);
+        }
+        var staffKey = String(sItem.staffCode || sItem.staffId || sItem.staffName || '').trim().toLowerCase();
+        if (!monthKey || !staffKey) continue;
+
+        var keyStr = monthKey + '_' + staffKey;
+        if (!slipMap[keyStr]) {
+          slipMap[keyStr] = sItem;
+          uniqueSlips.push(sItem);
+        } else {
+          var existingSlip = slipMap[keyStr];
+          var exSt = existingSlip.status || 'draft';
+          var newSt = sItem.status || 'draft';
+          if (exSt === 'draft' && newSt !== 'draft') {
+            var posIdx = uniqueSlips.indexOf(existingSlip);
+            if (posIdx >= 0) uniqueSlips[posIdx] = sItem;
+            slipMap[keyStr] = sItem;
+          }
+        }
+      }
+
+      var slipData = uniqueSlips.map(function(s) {
+        var pwTotal = s.pieceworkItems ? s.pieceworkItems.reduce(function(acc, p){ return acc + p.totalAmount; }, 0) : 0;
+        return [
+          s.id || '',
+          s.month || '',
+          s.staffCode || '',
+          s.staffName || '',
+          s.departmentName || '',
+          s.primarySalary ? s.primarySalary.totalAmount : 0,
+          pwTotal,
+          s.generalBonus || 0,
+          s.deductions || 0,
+          s.totalSalary || 0,
+          s.bankAccount || '',
+          s.bankName || '',
+          s.status || 'draft',
+          s.updatedAt || ''
+        ];
+      });
+      if (slipData.length > 0) {
+        sheetSlips.getRange(2, 1, slipData.length, slipHeaders.length).setValues(slipData);
+      }
+    }
   }
   
   // 2.5 Sheet CauHinh
-  if (data.orgSettings) {
+  if ((!targetSheet || targetSheet === 'CauHinh') && data.orgSettings) {
     var sheetCfg = getOrCreateSheet(ss, 'CauHinh');
-    sheetCfg.clear();
-    sheetCfg.appendRow(['Khóa Cấu Hình', 'Giá Trị']);
-    formatHeaderRow(sheetCfg, '#334155');
+    prepareSheet(sheetCfg, ['Khóa Cấu Hình', 'Giá Trị'], '#334155');
     
     var cfgRows = [
       ['orgName', data.orgSettings.orgName || ''],
@@ -657,7 +703,8 @@ export async function fetchFromGoogleSheet(
 
 export async function pushToGoogleSheet(
   webAppUrl: string = '',
-  payload: GoogleSheetsPayload
+  payload: GoogleSheetsPayload,
+  targetSheet?: 'NhanSu' | 'ChamCong' | 'DanhGiaKPI' | 'PhieuLuong' | 'CauHinh'
 ): Promise<{ success: boolean; message: string }> {
   try {
     const cleanUrl = (webAppUrl || '').trim();
@@ -683,7 +730,8 @@ export async function pushToGoogleSheet(
     };
 
     const bodyData = {
-      action: 'writeAll',
+      action: targetSheet ? 'writeSheet' : 'writeAll',
+      targetSheet,
       data: compatPayload,
     };
 

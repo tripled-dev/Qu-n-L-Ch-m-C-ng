@@ -58,8 +58,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
-  const currentMonthSlips = payrollSlips.filter(s => s.month === currentMonth);
-  const currentMonthEvals = evaluations.filter(e => e.month === currentMonth);
+  const normCurMonth = (currentMonth || '').trim().substring(0, 7);
+  const currentMonthSlips = payrollSlips.filter(s => (s.month || '').trim().substring(0, 7) === normCurMonth);
+  const currentMonthEvals = evaluations.filter(e => (e.month || '').trim().substring(0, 7) === normCurMonth);
   const activeStaffList = staffList.filter(s => s.isActive);
   const activeStaffCount = activeStaffList.length;
   const evaluatedStaffCount = new Set(currentMonthEvals.map(e => e.staffId)).size;

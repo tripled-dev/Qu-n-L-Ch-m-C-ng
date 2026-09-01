@@ -65,13 +65,32 @@ export const TimesheetManager: React.FC = () => {
 
   // Filtered timesheets for current month
   const monthTimesheets = useMemo(() => {
-    return timesheetEntries.filter(t => t.month === currentMonth);
+    const normCurMonth = (currentMonth || '').trim().substring(0, 7);
+    return timesheetEntries.map(t => {
+      let m = (t.month || '').trim();
+      if (m.length > 7 && m.includes('-')) {
+        m = m.substring(0, 7);
+      } else if (m.length > 7 || !m.includes('-')) {
+        const d = new Date(m);
+        if (!isNaN(d.getTime())) {
+          const yyyy = d.getFullYear();
+          const mm = String(d.getMonth() + 1).padStart(2, '0');
+          m = `${yyyy}-${mm}`;
+        }
+      }
+      return { ...t, month: m };
+    }).filter(t => (t.month || '').trim().substring(0, 7) === normCurMonth);
   }, [timesheetEntries, currentMonth]);
 
   // Aggregate monthly workload per staff according to the 5 standard items
   const staffWorkloadMatrix = useMemo(() => {
+    const normCurMonth = (currentMonth || '').trim().substring(0, 7);
     return staffList.filter(s => s.isActive).map(staff => {
-      const staffLogs = monthTimesheets.filter(t => t.staffId === staff.id || (staff.code && t.staffId === staff.code));
+      const staffLogs = monthTimesheets.filter(t => 
+        t.staffId === staff.id || 
+        (staff.code && t.staffId === staff.code) || 
+        (staff.fullName && t.staffId.trim().toLowerCase() === staff.fullName.trim().toLowerCase())
+      );
       const rates = getStaffDutyRates(staff);
       const roleType = resolveStaffRoleType(staff);
       const isTeacher = hasStaffRole(staff, 'giang_vien');
@@ -92,11 +111,11 @@ export const TimesheetManager: React.FC = () => {
       const bonusQty = bonusLogs.reduce((sum, t) => sum + (t.quantity * t.rate || t.rate || t.quantity), 0);
 
       // Existing slip bonus
-      const existingSlip = payrollSlips.find(p => (p.staffId === staff.id || (staff.code && p.staffCode === staff.code)) && p.month === currentMonth);
+      const existingSlip = payrollSlips.find(p => (p.staffId === staff.id || (staff.code && p.staffCode === staff.code)) && (p.month || '').trim().substring(0, 7) === normCurMonth);
       const totalBonus = (existingSlip?.generalBonus ?? 0) + bonusQty;
 
       // Evaluation info
-      const staffEvaluations = evaluations.filter(e => (e.staffId === staff.id || (staff.code && e.staffId === staff.code)) && e.month === currentMonth);
+      const staffEvaluations = evaluations.filter(e => (e.staffId === staff.id || (staff.code && e.staffId === staff.code)) && (e.month || '').trim().substring(0, 7) === normCurMonth);
       
       const roleMeta = STAFF_ROLE_DEFINITIONS[roleType] || STAFF_ROLE_DEFINITIONS.giang_vien;
       const assignedChecklists = getStaffAssignedChecklists(staff, checklistTemplates);
@@ -255,8 +274,9 @@ export const TimesheetManager: React.FC = () => {
     const targetQty = Math.max(0, newQty);
     
     // Find logs that precisely match the target rate
+    const normCurMonth = (currentMonth || '').trim().substring(0, 7);
     const existingLogs = timesheetEntries.filter(
-      t => t.staffId === staff.id && t.month === currentMonth && t.type === type && t.rate === targetRate
+      t => t.staffId === staff.id && (t.month || '').trim().substring(0, 7) === normCurMonth && t.type === type && t.rate === targetRate
     );
 
     if (existingLogs.length > 0) {
@@ -304,7 +324,8 @@ export const TimesheetManager: React.FC = () => {
     const dayWorkLogs = staffLogs.filter(t => t.type === 'day_work');
     const bonusLogs = staffLogs.filter(t => t.type === 'bonus');
 
-    const existingSlip = payrollSlips.find(p => p.staffId === staff.id && p.month === currentMonth);
+    const normCurMonth = (currentMonth || '').trim().substring(0, 7);
+    const existingSlip = payrollSlips.find(p => p.staffId === staff.id && (p.month || '').trim().substring(0, 7) === normCurMonth);
 
     const groupLogsByTier = (logs: TimesheetEntry[], defaultUnit: string, fallbackRate: number, fallbackLabel: string, tiers: any[]) => {
       const result = [];
@@ -598,31 +619,9 @@ export const TimesheetManager: React.FC = () => {
 
           </div>
 
-          
-      {/* DEBUG PANEL */}
-      <div className="p-4 bg-slate-900 text-green-400 font-mono text-xs overflow-auto max-h-40">
-        <div>DEBUG INFO:</div>
-        <div>currentMonth: {currentMonth}</div>
-        <div>Total TS: {timesheetEntries.length}</div>
-        <div>Month TS: {monthTimesheets.length}</div>
-        {monthTimesheets.length > 0 && (
-          <pre>{JSON.stringify(monthTimesheets.slice(0, 3), null, 2)}</pre>
-        )}
-      </div>
-      
-      {/* Main Matrix Table */}
-{/* Main Matrix Table strictly with 5 Billable Columns */}
+          {/* Main Matrix Table strictly with 5 Billable Columns */}
           <div className="bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden">
-            
-      {/* RAW TS DEBUG */}
-      <div className="p-4 m-4 bg-black text-white text-xs font-mono max-h-[300px] overflow-auto">
-        <p>Current Month: {currentMonth}</p>
-        <p>Total Staff: {staffList.length}</p>
-        <p>Timesheet Entries: {timesheetEntries.length}</p>
-        <pre>{JSON.stringify(timesheetEntries, null, 2)}</pre>
-      </div>
-
-<div className="overflow-x-auto">
+            <div className="overflow-x-auto">
               <table className="w-full text-left text-xs border-collapse">
                 <thead>
                   <tr className="bg-slate-900 text-white font-bold uppercase tracking-wider text-[11px]">

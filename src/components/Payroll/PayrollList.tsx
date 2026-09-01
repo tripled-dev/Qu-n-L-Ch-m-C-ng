@@ -44,7 +44,6 @@ export const PayrollList: React.FC = () => {
   const [activeSlip, setActiveSlip] = useState<MonthlyPayrollSlip | null>(null);
   const [evalStaff, setEvalStaff] = useState<Staff | null>(null);
   const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [viewMode, setViewMode] = useState<'five_items' | 'summary'>('five_items');
   const [syncedToast, setSyncedToast] = useState(false);
 
   const handleSyncFromTimesheets = () => {
@@ -54,8 +53,10 @@ export const PayrollList: React.FC = () => {
   };
 
   // Filter slips for current month
+  const normCurMonth = (currentMonth || '').trim().substring(0, 7);
   const currentMonthSlips = payrollSlips.filter(slip => {
-    if (slip.month !== currentMonth) return false;
+    const normSlipMonth = (slip.month || '').trim().substring(0, 7);
+    if (normSlipMonth !== normCurMonth) return false;
     if (departmentFilter !== 'all' && slip.departmentId !== departmentFilter) return false;
     if (statusFilter !== 'all' && slip.status !== statusFilter) return false;
     if (searchQuery) {
@@ -208,31 +209,6 @@ export const PayrollList: React.FC = () => {
               <option value="paid">Đã thanh toán</option>
             </select>
           </div>
-
-          {/* View Mode Toggle */}
-          <div className="flex items-center bg-slate-100 p-1 rounded-lg border border-slate-200 shrink-0">
-            <button
-              onClick={() => setViewMode('five_items')}
-              className={`px-2.5 py-1 text-xs font-bold rounded-md transition-all cursor-pointer whitespace-nowrap ${
-                viewMode === 'five_items'
-                  ? 'bg-white text-slate-900 shadow-xs border border-slate-200'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              5 Mục Chuẩn Hóa
-            </button>
-            <button
-              onClick={() => setViewMode('summary')}
-              className={`px-2.5 py-1 text-xs font-bold rounded-md transition-all cursor-pointer whitespace-nowrap ${
-                viewMode === 'summary'
-                  ? 'bg-white text-slate-900 shadow-xs border border-slate-200'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              Bản Rút Gọn
-            </button>
-          </div>
-
         </div>
 
         {/* Right Action Buttons */}
@@ -321,7 +297,7 @@ export const PayrollList: React.FC = () => {
               <span>Tạo Bảng Lương Tháng {formatMonthDisplay(currentMonth)}</span>
             </button>
           </div>
-        ) : viewMode === 'five_items' ? (
+        ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse text-xs">
               <thead>
@@ -523,190 +499,6 @@ export const PayrollList: React.FC = () => {
                           </button>
                         </div>
                       </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse text-xs sm:text-sm">
-              <thead>
-                <tr className="bg-slate-100/75 text-slate-700 font-bold border-b border-slate-200 text-xs">
-                  <th className="py-3 px-4">Nhân sự</th>
-                  <th className="py-3 px-3">Bộ phận</th>
-                  <th className="py-3 px-3">Mẫu phiếu</th>
-                  <th className="py-3 px-3 text-right">Lương chính</th>
-                  <th className="py-3 px-3 text-right">Lương LTSP</th>
-                  <th className="py-3 px-3 text-center">KPI</th>
-                  <th className="py-3 px-4 text-right">Thực nhận</th>
-                  <th className="py-3 px-3 text-center">Trạng thái</th>
-                  <th className="py-3 px-4 text-center">Thao tác</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {currentMonthSlips.map(slip => {
-                  const matchingStaff = staffList.find(s => s.id === slip.staffId);
-                  const roleType = matchingStaff ? resolveStaffRoleType(matchingStaff) : 'giang_vien';
-                  const roleMeta = STAFF_ROLE_DEFINITIONS[roleType] || STAFF_ROLE_DEFINITIONS.giang_vien;
-                  const pwTotal = slip.pieceworkItems.reduce((sum, item) => sum + item.totalAmount, 0);
-
-                  return (
-                    <tr key={slip.id} className="hover:bg-slate-50 transition-colors">
-                      
-                      {/* Staff Name & Code */}
-                      <td className="py-3.5 px-4">
-                        <div className="font-bold text-slate-900">{slip.staffName}</div>
-                        <div className="flex items-center gap-1.5 mt-1 flex-nowrap">
-                          <span className="font-mono text-[10px] bg-slate-100 text-slate-600 px-1.5 py-0.2 rounded border border-slate-200 whitespace-nowrap shrink-0">
-                            {slip.staffCode || '---'}
-                          </span>
-                          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border whitespace-nowrap inline-flex items-center shrink-0 max-w-[90px] truncate ${roleMeta.badgeBg} ${roleMeta.badgeText} ${roleMeta.badgeBorder}`}>
-                            {roleMeta.shortTitle}
-                          </span>
-                        </div>
-                      </td>
-
-                      {/* Department */}
-                      <td className="py-3.5 px-3">
-                        <span className="font-semibold text-slate-800 block">
-                          {slip.departmentName}
-                        </span>
-                        <span className="text-[11px] text-slate-500">
-                          {slip.bankName ? `${slip.bankName} - ${slip.bankAccount}` : ''}
-                        </span>
-                      </td>
-
-                      {/* Format Badge */}
-                      <td className="py-3.5 px-3">
-                        <span
-                          className={`inline-block px-2 py-0.5 text-[11px] font-semibold rounded ${
-                            slip.formatType === 'teaching'
-                              ? 'bg-blue-50 text-blue-700 border border-blue-200'
-                              : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                          }`}
-                        >
-                          {slip.formatType === 'teaching' ? 'Dạy Học' : 'Trợ Lý / LTSP'}
-                        </span>
-                      </td>
-
-                      {/* Primary Salary */}
-                      <td className="py-3.5 px-3 text-right font-medium text-slate-800">
-                        <div>{formatVND(slip.primarySalary.totalAmount)} đ</div>
-                        <div className="text-[11px] text-slate-500">
-                          {slip.primarySalary.daysOrSessions} {slip.primarySalary.unitName}
-                        </div>
-                      </td>
-
-                      {/* LTSP */}
-                      <td className="py-3.5 px-3 text-right font-medium text-slate-800">
-                        {pwTotal > 0 ? (
-                          <div>
-                            <div>{formatVND(pwTotal)} đ</div>
-                            <div className="text-[11px] text-slate-500">
-                              {slip.pieceworkItems.filter(p => p.quantity > 0).length} hạng mục
-                            </div>
-                          </div>
-                        ) : (
-                          <span className="text-slate-400">—</span>
-                        )}
-                      </td>
-
-                      {/* KPI */}
-                      <td className="py-3.5 px-3 text-center">
-                        <button
-                          onClick={() => {
-                            if (matchingStaff) setEvalStaff(matchingStaff);
-                          }}
-                          className={`inline-flex items-center gap-1 font-bold text-xs px-2 py-0.5 rounded cursor-pointer hover:ring-2 hover:ring-slate-400 ${
-                            slip.primarySalary.kpiPercent >= 95
-                              ? 'bg-emerald-100 text-emerald-800'
-                              : slip.primarySalary.kpiPercent >= 80
-                              ? 'bg-sky-100 text-sky-800'
-                              : 'bg-amber-100 text-amber-800'
-                          }`}
-                          title="Bấm để xem / chỉnh sửa Bảng Kiểm KPI"
-                        >
-                          <span>{slip.primarySalary.kpiPercent}%</span>
-                          <CheckSquare className="w-3 h-3 text-slate-600" />
-                        </button>
-                      </td>
-
-                      {/* Net Salary (Thực Nhận) */}
-                      <td className="py-3.5 px-4 text-right">
-                        <div className="font-extrabold text-slate-900 text-base">
-                          {formatVND(slip.totalSalary)} đ
-                        </div>
-                      </td>
-
-                      {/* Status */}
-                      <td className="py-3.5 px-3 text-center">
-                        <select
-                          value={slip.status}
-                          onChange={e => updateSlipStatus(slip.id, e.target.value as any)}
-                          className={`text-[11px] font-bold py-1 px-2 rounded-full border cursor-pointer ${
-                            slip.status === 'paid'
-                              ? 'bg-emerald-50 text-emerald-700 border-emerald-300'
-                              : slip.status === 'approved'
-                              ? 'bg-sky-50 text-sky-700 border-sky-300'
-                              : 'bg-amber-50 text-amber-700 border-amber-300'
-                          }`}
-                        >
-                          <option value="draft">Bản nháp</option>
-                          <option value="approved">Đã duyệt</option>
-                          <option value="paid">Đã thanh toán</option>
-                        </select>
-                      </td>
-
-                      {/* Action buttons */}
-                      <td className="py-3.5 px-4 text-center">
-                        <div className="flex items-center justify-center gap-1">
-                          
-                          {/* View Slip */}
-                          <button
-                            onClick={() => setActiveSlip(slip)}
-                            className="p-1.5 text-slate-700 hover:text-slate-900 hover:bg-slate-100 rounded-md transition-colors"
-                            title="Xem & Xuất phiếu lương chuẩn Triple D"
-                          >
-                            <FileText className="w-4 h-4 text-slate-700" />
-                          </button>
-
-                          {/* Evaluate KPI */}
-                          <button
-                            onClick={() => {
-                              if (matchingStaff) setEvalStaff(matchingStaff);
-                            }}
-                            className="p-1.5 text-slate-700 hover:text-slate-900 hover:bg-slate-100 rounded-md transition-colors"
-                            title="Đánh giá theo Bảng Kiểm Trọng Số"
-                          >
-                            <CheckSquare className="w-4 h-4 text-indigo-600" />
-                          </button>
-
-                          {/* Delete */}
-                          <button
-                            onClick={() => {
-                              showConfirm({
-                                title: 'Xác nhận xóa phiếu lương',
-                                message: `Bạn có chắc chắn muốn xóa phiếu lương tháng ${formatMonthDisplay(currentMonth)} của ${slip.staffName}?`,
-                                confirmText: 'Xóa phiếu',
-                                variant: 'danger',
-                                icon: 'trash',
-                                onConfirm: () => {
-                                  deletePayrollSlip(slip.id);
-                                  showToast(`Đã xóa phiếu lương của ${slip.staffName}`, 'info');
-                                },
-                              });
-                            }}
-                            className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors"
-                            title="Xóa phiếu lương này"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-
-                        </div>
-                      </td>
-
                     </tr>
                   );
                 })}

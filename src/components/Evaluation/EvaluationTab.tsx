@@ -13,6 +13,8 @@ export const EvaluationTab: React.FC = () => {
 
   const activeStaff = staffList.filter(s => s.isActive);
 
+  const normCurMonth = (currentMonth || '').trim().substring(0, 7);
+
   const filteredStaff = activeStaff.filter(s => {
     if (selectedRoleFilter === 'all') return true;
     return resolveStaffRoleType(s) === selectedRoleFilter;
@@ -20,7 +22,7 @@ export const EvaluationTab: React.FC = () => {
 
   // Calculate stats
   const totalEvaluated = activeStaff.filter(s => 
-    evaluations.some(e => e.staffId === s.id && e.month === currentMonth)
+    evaluations.some(e => e.staffId === s.id && (e.month || '').trim().substring(0, 7) === normCurMonth)
   ).length;
 
   return (
@@ -93,7 +95,7 @@ export const EvaluationTab: React.FC = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
         {filteredStaff.map(staff => {
           const evalRecord = evaluations.find(
-            e => e.staffId === staff.id && e.month === currentMonth
+            e => e.staffId === staff.id && (e.month || '').trim().substring(0, 7) === normCurMonth
           );
           const hasEvaluated = !!evalRecord;
           const kpiScore = evalRecord ? evalRecord.calculatedTotalKpi : 100;

@@ -367,23 +367,25 @@ export const SettingsView: React.FC = () => {
           Bạn có thể xuất file sao lưu JSON, khôi phục từ file hoặc xóa dữ liệu mẫu để sẵn sàng tải dữ liệu từ Google Sheet.
         </p>
 
-        <div className="flex flex-wrap items-center gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
           <button
             type="button"
             onClick={exportBackupJson}
-            className="flex items-center gap-1.5 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold rounded-lg transition-colors cursor-pointer"
+            className="flex items-center justify-center gap-1.5 px-2.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold rounded-lg transition-colors cursor-pointer whitespace-nowrap"
+            title="Tải bản sao lưu JSON về máy"
           >
-            <Download className="w-4 h-4 text-slate-600" />
-            <span>Tải Bản Sao Lưu (JSON)</span>
+            <Download className="w-3.5 h-3.5 text-slate-600 shrink-0" />
+            <span>Tải Sao Lưu</span>
           </button>
 
           <button
             type="button"
             onClick={() => fileInputRef.current?.click()}
-            className="flex items-center gap-1.5 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold rounded-lg transition-colors cursor-pointer"
+            className="flex items-center justify-center gap-1.5 px-2.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold rounded-lg transition-colors cursor-pointer whitespace-nowrap"
+            title="Khôi phục dữ liệu từ file JSON"
           >
-            <Upload className="w-4 h-4 text-slate-600" />
-            <span>Khôi Phục Từ File JSON</span>
+            <Upload className="w-3.5 h-3.5 text-slate-600 shrink-0" />
+            <span>Khôi Phục</span>
           </button>
           <input
             type="file"
@@ -396,10 +398,11 @@ export const SettingsView: React.FC = () => {
           <button
             type="button"
             onClick={() => setShowClearSheetModal(true)}
-            className="flex items-center gap-1.5 px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold rounded-lg transition-colors cursor-pointer shadow-sm shadow-rose-600/20"
+            className="flex items-center justify-center gap-1.5 px-2.5 py-2 bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold rounded-lg transition-colors cursor-pointer shadow-xs shadow-rose-600/20 whitespace-nowrap"
+            title="Xóa hết dữ liệu trên Google Sheet (Cần mật khẩu)"
           >
-            <ShieldAlert className="w-4 h-4 text-white" />
-            <span>Xóa Hết Dữ Liệu Sheet (Pass: 260606)</span>
+            <ShieldAlert className="w-3.5 h-3.5 text-white shrink-0" />
+            <span>Xóa Sheet</span>
           </button>
 
           <button
@@ -417,10 +420,11 @@ export const SettingsView: React.FC = () => {
                 },
               });
             }}
-            className="flex items-center gap-1.5 px-4 py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-bold rounded-lg transition-colors cursor-pointer"
+            className="flex items-center justify-center gap-1.5 px-2.5 py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-bold rounded-lg transition-colors cursor-pointer whitespace-nowrap"
+            title="Xóa bộ nhớ tạm trên trình duyệt"
           >
-            <Trash2 className="w-4 h-4 text-rose-600" />
-            <span>Xóa Dữ Liệu Tạm</span>
+            <Trash2 className="w-3.5 h-3.5 text-rose-600 shrink-0" />
+            <span>Xóa Tạm</span>
           </button>
 
           <button
@@ -437,10 +441,11 @@ export const SettingsView: React.FC = () => {
                 },
               });
             }}
-            className="flex items-center gap-1.5 px-4 py-2 bg-slate-50 hover:bg-slate-100 text-slate-600 text-xs font-semibold rounded-lg transition-colors cursor-pointer ml-auto"
+            className="flex items-center justify-center gap-1.5 px-2.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-lg transition-colors cursor-pointer whitespace-nowrap col-span-2 sm:col-span-1"
+            title="Khôi phục lại dữ liệu mẫu ban đầu"
           >
-            <RotateCcw className="w-4 h-4 text-slate-500" />
-            <span>Khôi Phục Mẫu Ban Đầu</span>
+            <RotateCcw className="w-3.5 h-3.5 text-slate-500 shrink-0" />
+            <span>Khôi Phục Mẫu</span>
           </button>
         </div>
       </div>

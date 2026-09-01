@@ -134,6 +134,43 @@ const AppContext = createContext<AppContextType | undefined>(undefined);
 
 const LOCAL_STORAGE_KEY_PREFIX = 'triple_d_payroll_v3_';
 
+export const deduplicatePayrollSlips = (slips: MonthlyPayrollSlip[]): MonthlyPayrollSlip[] => {
+  if (!Array.isArray(slips)) return [];
+  const map = new Map<string, MonthlyPayrollSlip>();
+
+  slips.forEach(slip => {
+    if (!slip) return;
+    const rawMonth = (slip.month || '').trim();
+    if (!rawMonth) return;
+    const normMonth = rawMonth.length > 7 && rawMonth.includes('-') ? rawMonth.substring(0, 7) : rawMonth;
+    const staffKey = (slip.staffId || slip.staffCode || slip.staffName || '').trim().toLowerCase();
+    if (!staffKey) return;
+
+    const key = `${normMonth}__${staffKey}`;
+
+    if (!map.has(key)) {
+      map.set(key, { ...slip, month: normMonth });
+    } else {
+      const existing = map.get(key)!;
+      const statusWeight = (s: MonthlyPayrollSlip) => (s.status === 'paid' ? 3 : s.status === 'approved' ? 2 : 1);
+      const exWeight = statusWeight(existing);
+      const newWeight = statusWeight(slip);
+
+      if (newWeight > exWeight) {
+        map.set(key, { ...slip, month: normMonth });
+      } else if (newWeight === exWeight) {
+        const exTime = existing.updatedAt ? new Date(existing.updatedAt).getTime() : 0;
+        const newTime = slip.updatedAt ? new Date(slip.updatedAt).getTime() : 0;
+        if (newTime >= exTime) {
+          map.set(key, { ...slip, month: normMonth });
+        }
+      }
+    }
+  });
+
+  return Array.from(map.values());
+};
+
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   // Tự động xác định kỳ lương:
   // - Nếu ngày <= 15 (nửa đầu tháng): hiển thị kỳ lương tháng trước
@@ -241,7 +278,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        if (Array.isArray(parsed) && parsed.length > 0) return deduplicatePayrollSlips(parsed);
       } catch (e) {}
     }
     return INITIAL_PAYROLL_SLIPS;
@@ -263,10 +300,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed.map((t: TimesheetEntry) => sanitizeTimesheetEntry(t));
+        }
       } catch (e) {}
     }
-    return INITIAL_TIMESHEET_ENTRIES;
+    return INITIAL_TIMESHEET_ENTRIES.map(t => sanitizeTimesheetEntry(t));
   });
 
   const [evaluations, setEvaluations] = useState<KpiEvaluation[]>(() => {
@@ -301,9 +340,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const isInitialSyncDoneRef = useRef<boolean>(false);
   const autoPushTimerRef = useRef<NodeJS.Timeout | null>(null);
   const hasUserEditedRef = useRef<boolean>(false);
+  const editedSheetsRef = useRef<Set<'NhanSu' | 'ChamCong' | 'DanhGiaKPI' | 'PhieuLuong' | 'CauHinh'>>(
+    new Set<'NhanSu' | 'ChamCong' | 'DanhGiaKPI' | 'PhieuLuong' | 'CauHinh'>()
+  );
 
-  const markUserEdit = () => {
+  const markUserEdit = (sheetName?: 'NhanSu' | 'ChamCong' | 'DanhGiaKPI' | 'PhieuLuong' | 'CauHinh') => {
     hasUserEditedRef.current = true;
+    if (sheetName) {
+      editedSheetsRef.current.add(sheetName);
+    }
     try {
       localStorage.setItem(`${LOCAL_STORAGE_KEY_PREFIX}has_pending_edits`, 'true');
     } catch (e) {}
@@ -311,6 +356,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const clearPendingEditsFlag = () => {
     hasUserEditedRef.current = false;
+    editedSheetsRef.current.clear();
     try {
       localStorage.removeItem(`${LOCAL_STORAGE_KEY_PREFIX}has_pending_edits`);
     } catch (e) {}
@@ -343,6 +389,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // Auto Generate or Sync Payroll for whole Month strictly with 5 Billable Categories & Ca lẻ synchronization
   const generateMonthlyPayrollForStaff = (month: string) => {
+    if (!month) return;
+    const rawMonth = month.trim();
+    const normMonth = rawMonth.length > 7 && rawMonth.includes('-') ? rawMonth.substring(0, 7) : rawMonth;
+    if (!normMonth || normMonth.length !== 7 || !normMonth.includes('-')) return;
+
     const curStaff = staffListRef.current;
     const curTimesheets = timesheetEntriesRef.current;
     const curEvals = evaluationsRef.current;
@@ -359,12 +410,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const roleType = resolveStaffRoleType(staff);
       const isAssistant = roleType === 'tro_ly' || staff.departmentId === 'tro_ly' || hasStaffRole(staff, 'tro_ly');
 
-      const existingSlip = curSlips.find(s => s.staffId === staff.id && s.month === month);
+      const existingSlip = curSlips.find(
+        s =>
+          (s.month || '').trim().substring(0, 7) === normMonth &&
+          (s.staffId === staff.id ||
+            (staff.code && s.staffCode === staff.code) ||
+            (staff.fullName && (s.staffName || '').trim().toLowerCase() === staff.fullName.trim().toLowerCase()))
+      );
       
       // Helper to fetch specific KPI for a target department
       const getKpiForDept = (templateId: string, deptKeyword: string) => {
-        const directEval = curEvals.find(e => e.staffId === staff.id && e.month === month && e.templateId === templateId);
-        const soanBaiEval = curEvals.find(e => e.staffId === staff.id && e.month === month && e.templateId === 'chk_soan_bai');
+        const directEval = curEvals.find(e => e.staffId === staff.id && (e.month || '').trim().substring(0, 7) === normMonth && e.templateId === templateId);
+        const soanBaiEval = curEvals.find(e => e.staffId === staff.id && (e.month || '').trim().substring(0, 7) === normMonth && e.templateId === 'chk_soan_bai');
         const soanBaiScore = soanBaiEval ? soanBaiEval.calculatedTotalKpi : undefined;
 
         if (directEval) {
@@ -377,7 +434,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         }
 
         const deptTemplates = curTemplates.filter(t => t.targetDepartment?.toLowerCase().includes(deptKeyword.toLowerCase()) || t.id === templateId);
-        const deptEval = curEvals.find(e => e.staffId === staff.id && e.month === month && deptTemplates.some(t => t.id === e.templateId));
+        const deptEval = curEvals.find(e => e.staffId === staff.id && (e.month || '').trim().substring(0, 7) === normMonth && deptTemplates.some(t => t.id === e.templateId));
         if (deptEval) {
           const template = curTemplates.find(t => t.id === deptEval.templateId);
           if (template?.linkedTemplateId && (soanBaiScore !== undefined || deptEval.linkedSoanBaiScore !== undefined)) {
@@ -392,7 +449,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           }
         }
 
-        const staffEvals = curEvals.filter(e => (e.staffId === staff.id || (staff.code && e.staffId === staff.code)) && e.month === month);
+        const staffEvals = curEvals.filter(e => (e.staffId === staff.id || (staff.code && e.staffId === staff.code)) && (e.month || '').trim().substring(0, 7) === normMonth);
         if (staffEvals.length > 0) {
           return staffEvals[0].calculatedTotalKpi;
         }
@@ -406,7 +463,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
       // Filter staff timesheets for this month
       const staffTimesheets = curTimesheets.filter(
-        t => (t.staffId === staff.id || (staff.code && t.staffId === staff.code)) && t.month === month
+        t => (t.staffId === staff.id || (staff.code && t.staffId === staff.code) || (staff.fullName && t.staffId.trim().toLowerCase() === staff.fullName.trim().toLowerCase())) &&
+             (t.month || '').trim().substring(0, 7) === normMonth
       );
 
       // Helper to group timesheet items by label & rate for exact workload transparency
@@ -606,8 +664,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const isTeachingFormat = roleType === 'giang_vien' || (teachingQty > 0 && !isAssistant);
 
       const slip: MonthlyPayrollSlip = {
-        id: existingSlip ? existingSlip.id : `slip_${month.replace('-', '_')}_${staff.id}`,
-        month,
+        id: existingSlip ? existingSlip.id : `slip_${normMonth.replace('-', '_')}_${staff.id}`,
+        month: normMonth,
         staffId: staff.id,
         staffName: staff.fullName,
         staffCode: staff.code,
@@ -697,19 +755,40 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     });
 
     setPayrollSlips(prev => {
-      const others = prev.filter(s => s.month !== month);
-      const updated = [...others, ...newSlips];
-      payrollSlipsRef.current = updated;
-      return updated;
+      const others = prev.filter(s => {
+        const isSameMonth = (s.month || '').trim().substring(0, 7) === normMonth;
+        const isForActiveStaff = curStaff.some(st => 
+          st.id === s.staffId ||
+          (st.code && st.code === s.staffCode) ||
+          (st.fullName && st.fullName.trim().toLowerCase() === (s.staffName || '').trim().toLowerCase())
+        );
+        return !(isSameMonth && isForActiveStaff);
+      });
+      const combined = deduplicatePayrollSlips([...others, ...newSlips]);
+      payrollSlipsRef.current = combined;
+      return combined;
     });
   };
 
   // Auto-sync payroll slips whenever evaluations, timesheets, staff, templates or settings change
   useEffect(() => {
     const months = new Set<string>();
-    months.add(currentMonth);
-    timesheetEntries.forEach(t => { if (t.month) months.add(t.month); });
-    evaluations.forEach(e => { if (e.month) months.add(e.month); });
+    if (currentMonth) {
+      const curM = currentMonth.trim().substring(0, 7);
+      if (curM.length === 7 && curM.includes('-')) months.add(curM);
+    }
+    timesheetEntries.forEach(t => {
+      if (t.month) {
+        const m = t.month.trim().substring(0, 7);
+        if (m.length === 7 && m.includes('-')) months.add(m);
+      }
+    });
+    evaluations.forEach(e => {
+      if (e.month) {
+        const m = e.month.trim().substring(0, 7);
+        if (m.length === 7 && m.includes('-')) months.add(m);
+      }
+    });
 
     months.forEach(m => {
       generateMonthlyPayrollForStaff(m);
@@ -919,6 +998,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             if (evalPreserved) shouldAutoPushLocalData = true;
           }
 
+          // Payroll Slips
+          const rawSheetSlips = Array.isArray(result.data.payrollSlips) ? result.data.payrollSlips : [];
+          if (rawSheetSlips.length > 0) {
+            const cleanSlips = deduplicatePayrollSlips(rawSheetSlips);
+            const mergedSlips = deduplicatePayrollSlips([...cleanSlips, ...payrollSlipsRef.current]);
+            setPayrollSlips(mergedSlips);
+            payrollSlipsRef.current = mergedSlips;
+          }
+
           // Org Settings & Templates
           if (result.data.orgSettings && typeof result.data.orgSettings === 'object' && Object.keys(result.data.orgSettings).length > 0) {
             setOrgSettings(result.data.orgSettings);
@@ -929,8 +1017,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             checklistTemplatesRef.current = result.data.checklistTemplates;
           }
 
-          // Recalculate payroll to sync monthly totals
-          generateMonthlyPayrollForStaff(currentMonth);
+          // Recalculate payroll to sync monthly totals for all active months
+          const syncMonths = new Set<string>();
+          if (currentMonth) syncMonths.add(currentMonth.trim().substring(0, 7));
+          timesheetEntriesRef.current.forEach(t => {
+            if (t.month) {
+              const m = t.month.trim().substring(0, 7);
+              if (m.length === 7 && m.includes('-')) syncMonths.add(m);
+            }
+          });
+          syncMonths.forEach(m => generateMonthlyPayrollForStaff(m));
 
           const now = new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
           setLastSyncTime(now);
@@ -1014,8 +1110,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           lastUpdated: new Date().toISOString(),
         };
 
-        setSyncStatusMessage({ type: 'syncing', text: 'Đang tự động lưu lên Google Sheet...' });
-        const result = await pushToGoogleSheet(url, payload);
+        const editedSheets = Array.from(editedSheetsRef.current);
+        const targetSheet =
+          editedSheets.length === 1
+            ? (editedSheets[0] as 'NhanSu' | 'ChamCong' | 'DanhGiaKPI' | 'PhieuLuong' | 'CauHinh')
+            : undefined;
+        setSyncStatusMessage({ 
+          type: 'syncing', 
+          text: targetSheet ? `Đang tự động lưu bảng (${targetSheet}) lên Google Sheet...` : 'Đang tự động lưu lên Google Sheet...' 
+        });
+        const result = await pushToGoogleSheet(url, payload, targetSheet);
         if (result.success) {
           const now = new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
           setLastSyncTime(now);
@@ -1040,7 +1144,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // Staff CRUD
   const addStaff = (staffData: Omit<Staff, 'id'>) => {
-    markUserEdit();
+    markUserEdit('NhanSu');
     const newStaff: Staff = {
       ...staffData,
       id: `staff_${Date.now()}`,
@@ -1052,7 +1156,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const updateStaff = (updatedStaff: Staff) => {
-    markUserEdit();
+    markUserEdit('NhanSu');
     const nextList = staffListRef.current.map(s => (s.id === updatedStaff.id ? updatedStaff : s));
     staffListRef.current = nextList;
     setStaffList(nextList);
@@ -1078,7 +1182,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const deleteStaff = (id: string) => {
-    markUserEdit();
+    markUserEdit('NhanSu');
     const nextList = staffListRef.current.filter(s => s.id !== id);
     staffListRef.current = nextList;
     setStaffList(nextList);
@@ -1099,7 +1203,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // Timesheet
   const addTimesheetEntry = (entryData: Omit<TimesheetEntry, 'id'>) => {
-    markUserEdit();
+    markUserEdit('ChamCong');
     const newEntry: TimesheetEntry = {
       ...entryData,
       id: `ts_${Date.now()}`,
@@ -1111,7 +1215,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const updateTimesheetEntry = (entry: TimesheetEntry) => {
-    markUserEdit();
+    markUserEdit('ChamCong');
     const nextTs = timesheetEntriesRef.current.map(e => (e.id === entry.id ? entry : e));
     timesheetEntriesRef.current = nextTs;
     setTimesheetEntries(nextTs);
@@ -1119,7 +1223,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const deleteTimesheetEntry = (id: string) => {
-    markUserEdit();
+    markUserEdit('ChamCong');
     const entryToDelete = timesheetEntriesRef.current.find(e => e.id === id);
     const nextTs = timesheetEntriesRef.current.filter(e => e.id !== id);
     timesheetEntriesRef.current = nextTs;
@@ -1131,7 +1235,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // Evaluation
   const saveEvaluation = (evalData: Omit<KpiEvaluation, 'id'>) => {
-    markUserEdit();
+    markUserEdit('DanhGiaKPI');
     const curEvals = evaluationsRef.current;
     const existingIndex = curEvals.findIndex(
       e => e.staffId === evalData.staffId && e.month === evalData.month && e.templateId === evalData.templateId
@@ -1163,23 +1267,33 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // Payroll Slips
   const savePayrollSlip = (slip: MonthlyPayrollSlip) => {
-    markUserEdit();
+    markUserEdit('PhieuLuong');
     setPayrollSlips(prev => {
-      const idx = prev.findIndex(s => s.id === slip.id);
+      const normMonth = (slip.month || '').trim().substring(0, 7);
+      const slipToSave = { ...slip, month: normMonth };
+      const idx = prev.findIndex(
+        s =>
+          s.id === slip.id ||
+          (((s.month || '').substring(0, 7) === normMonth) &&
+            (s.staffId === slip.staffId ||
+              (slip.staffCode && s.staffCode === slip.staffCode) ||
+              (slip.staffName && (s.staffName || '').trim().toLowerCase() === (slip.staffName || '').trim().toLowerCase())))
+      );
       let updated: MonthlyPayrollSlip[];
       if (idx >= 0) {
         updated = [...prev];
-        updated[idx] = slip;
+        updated[idx] = slipToSave;
       } else {
-        updated = [...prev, slip];
+        updated = [...prev, slipToSave];
       }
-      payrollSlipsRef.current = updated;
-      return updated;
+      const clean = deduplicatePayrollSlips(updated);
+      payrollSlipsRef.current = clean;
+      return clean;
     });
   };
 
   const deletePayrollSlip = (id: string) => {
-    markUserEdit();
+    markUserEdit('PhieuLuong');
     setPayrollSlips(prev => {
       const updated = prev.filter(s => s.id !== id);
       payrollSlipsRef.current = updated;
@@ -1188,7 +1302,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const updateSlipStatus = (id: string, status: 'draft' | 'approved' | 'paid') => {
-    markUserEdit();
+    markUserEdit('PhieuLuong');
     setPayrollSlips(prev => {
       const updated = prev.map(s => (s.id === id ? { ...s, status, updatedAt: new Date().toISOString() } : s));
       payrollSlipsRef.current = updated;
@@ -1210,7 +1324,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       note?: string;
     }>
   ) => {
-    markUserEdit();
+    markUserEdit('ChamCong');
     // Remove existing entries of matching types
     const newTypes = new Set(items.map(i => i.type));
     const filtered = timesheetEntriesRef.current.filter(
@@ -1245,7 +1359,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const updateOrgSettings = (settings: OrgSettings) => {
-    markUserEdit();
+    markUserEdit('CauHinh');
     setOrgSettings(settings);
   };
 
@@ -1308,7 +1422,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
-  const pushDataToGoogleSheet = async (customUrl?: string): Promise<{ success: boolean; message: string }> => {
+  const pushDataToGoogleSheet = async (
+    customUrl?: string,
+    targetSheet?: 'NhanSu' | 'ChamCong' | 'DanhGiaKPI' | 'PhieuLuong' | 'CauHinh'
+  ): Promise<{ success: boolean; message: string }> => {
     const url = (customUrl || googleSheetUrl).trim();
     if (!url) {
       const err = 'Chưa cấu hình URL Google Apps Script. Vui lòng nhập URL triển khai ứng dụng web.';
@@ -1317,7 +1434,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
 
     setIsSyncingGoogleSheet(true);
-    setSyncStatusMessage({ type: 'syncing', text: 'Đang đẩy toàn bộ dữ liệu lên Google Sheet...' });
+    setSyncStatusMessage({ 
+      type: 'syncing', 
+      text: targetSheet ? `Đang đẩy dữ liệu bảng (${targetSheet}) lên Google Sheet...` : 'Đang đẩy toàn bộ dữ liệu lên Google Sheet...' 
+    });
 
     try {
       const payload = {
@@ -1330,7 +1450,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         lastUpdated: new Date().toISOString(),
       };
 
-      const result = await pushToGoogleSheet(url, payload);
+      const result = await pushToGoogleSheet(url, payload, targetSheet);
       if (result.success) {
         clearPendingEditsFlag();
         const now = new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
@@ -1461,7 +1581,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // Derived Monthly statistics
   const monthlyStats = useMemo(() => {
-    const slipsForMonth = payrollSlips.filter(s => s.month === currentMonth);
+    const normMonth = (currentMonth || '').trim().substring(0, 7);
+    const slipsForMonth = payrollSlips.filter(s => (s.month || '').trim().substring(0, 7) === normMonth);
     const totalPayroll = slipsForMonth.reduce((sum, s) => sum + s.totalSalary, 0);
     const totalEmployees = slipsForMonth.length;
     const approvedSlipsCount = slipsForMonth.filter(s => s.status === 'approved' || s.status === 'paid').length;
@@ -1470,14 +1591,31 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     let totalSubmissions = 0;
     let totalKpiSum = 0;
 
-    slipsForMonth.forEach(slip => {
-      if (slip.formatType === 'teaching') {
-        totalSessions += slip.primarySalary.daysOrSessions;
+    // Direct calculation of sessions & submissions from timesheet entries for exact realtime stats
+    const monthTs = timesheetEntries.filter(t => (t.month || '').trim().substring(0, 7) === normMonth);
+    monthTs.forEach(t => {
+      if (t.type === 'teaching_session' || t.type === 'tutoring_session' || t.unit === 'Buổi') {
+        totalSessions += t.quantity;
       }
-      slip.pieceworkItems.forEach(pw => {
-        if (pw.unit === 'Buổi') totalSessions += pw.quantity;
-        if (pw.unit === 'Bài') totalSubmissions += pw.quantity;
+      if (t.type === 'grading' || t.unit === 'Bài') {
+        totalSubmissions += t.quantity;
+      }
+    });
+
+    // Fallback or supplementary calculation from payroll slips if present
+    if (totalSessions === 0 && totalSubmissions === 0 && slipsForMonth.length > 0) {
+      slipsForMonth.forEach(slip => {
+        if (slip.formatType === 'teaching') {
+          totalSessions += slip.primarySalary.daysOrSessions;
+        }
+        slip.pieceworkItems.forEach(pw => {
+          if (pw.unit === 'Buổi') totalSessions += pw.quantity;
+          if (pw.unit === 'Bài') totalSubmissions += pw.quantity;
+        });
       });
+    }
+
+    slipsForMonth.forEach(slip => {
       totalKpiSum += slip.primarySalary.kpiPercent;
     });
 
@@ -1491,7 +1629,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       averageKpi,
       approvedSlipsCount,
     };
-  }, [payrollSlips, currentMonth]);
+  }, [payrollSlips, timesheetEntries, currentMonth]);
 
   return (
     <AppContext.Provider
