@@ -598,9 +598,31 @@ export const TimesheetManager: React.FC = () => {
 
           </div>
 
-          {/* Main Matrix Table strictly with 5 Billable Columns */}
+          
+      {/* DEBUG PANEL */}
+      <div className="p-4 bg-slate-900 text-green-400 font-mono text-xs overflow-auto max-h-40">
+        <div>DEBUG INFO:</div>
+        <div>currentMonth: {currentMonth}</div>
+        <div>Total TS: {timesheetEntries.length}</div>
+        <div>Month TS: {monthTimesheets.length}</div>
+        {monthTimesheets.length > 0 && (
+          <pre>{JSON.stringify(monthTimesheets.slice(0, 3), null, 2)}</pre>
+        )}
+      </div>
+      
+      {/* Main Matrix Table */}
+{/* Main Matrix Table strictly with 5 Billable Columns */}
           <div className="bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden">
-            <div className="overflow-x-auto">
+            
+      {/* RAW TS DEBUG */}
+      <div className="p-4 m-4 bg-black text-white text-xs font-mono max-h-[300px] overflow-auto">
+        <p>Current Month: {currentMonth}</p>
+        <p>Total Staff: {staffList.length}</p>
+        <p>Timesheet Entries: {timesheetEntries.length}</p>
+        <pre>{JSON.stringify(timesheetEntries, null, 2)}</pre>
+      </div>
+
+<div className="overflow-x-auto">
               <table className="w-full text-left text-xs border-collapse">
                 <thead>
                   <tr className="bg-slate-900 text-white font-bold uppercase tracking-wider text-[11px]">

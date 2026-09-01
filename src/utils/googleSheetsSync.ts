@@ -115,6 +115,7 @@ export function sanitizeTimesheetEntry(t: TimesheetEntry): TimesheetEntry {
     month,
     date,
     staffId: (t.staffId || '').trim(),
+    type: (t.type || '').trim(),
     quantity,
     rate,
     unit

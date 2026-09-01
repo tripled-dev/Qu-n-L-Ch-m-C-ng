@@ -1269,8 +1269,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           staffListRef.current = result.data.staffList;
         }
         if (result.data.timesheetEntries && Array.isArray(result.data.timesheetEntries)) {
-          setTimesheetEntries(result.data.timesheetEntries);
-          timesheetEntriesRef.current = result.data.timesheetEntries;
+          const sanitizedTs = result.data.timesheetEntries.map(t => sanitizeTimesheetEntry(t));
+          setTimesheetEntries(sanitizedTs);
+          timesheetEntriesRef.current = sanitizedTs;
         }
         if (result.data.evaluations && Array.isArray(result.data.evaluations)) {
           setEvaluations(result.data.evaluations);
