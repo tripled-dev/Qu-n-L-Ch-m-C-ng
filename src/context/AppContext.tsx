@@ -225,7 +225,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // Load from local storage or fallback to initial data
   const [staffList, setStaffList] = useState<Staff[]>(() => {
     const saved = localStorage.getItem(`${LOCAL_STORAGE_KEY_PREFIX}staff`);
-    return saved ? JSON.parse(saved) : INITIAL_STAFF;
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      } catch (e) {}
+    }
+    return INITIAL_STAFF;
   });
 
   const [payrollSlips, setPayrollSlips] = useState<MonthlyPayrollSlip[]>(() => {
@@ -253,7 +259,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return saved ? JSON.parse(saved) : INITIAL_ORG_SETTINGS;
   });
 
-  const [googleSheetUrl, setGoogleSheetUrlState] = useState<string>(FIXED_GOOGLE_APPS_SCRIPT_URL);
+  const [googleSheetUrl, setGoogleSheetUrlState] = useState<string>(() => {
+    return localStorage.getItem(`${LOCAL_STORAGE_KEY_PREFIX}gsheet_url`) || '';
+  });
 
   const [isSyncingGoogleSheet, setIsSyncingGoogleSheet] = useState<boolean>(false);
   const [lastSyncTime, setLastSyncTime] = useState<string | null>(() => {
@@ -268,7 +276,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const autoPushTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   const setGoogleSheetUrl = (url: string) => {
-    const targetUrl = url.trim() || FIXED_GOOGLE_APPS_SCRIPT_URL;
+    const targetUrl = url.trim();
     setGoogleSheetUrlState(targetUrl);
     localStorage.setItem(`${LOCAL_STORAGE_KEY_PREFIX}gsheet_url`, targetUrl);
   };
@@ -692,12 +700,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     localStorage.setItem(`${LOCAL_STORAGE_KEY_PREFIX}org_settings`, JSON.stringify(orgSettings));
   }, [orgSettings]);
 
-  // 1. Auto-fetch data from Google Sheet on initial mount
+  // 1. Auto-fetch data from Google Sheet on initial mount if URL is configured
   useEffect(() => {
     let isMounted = true;
     const initialSync = async () => {
+      const url = (localStorage.getItem(`${LOCAL_STORAGE_KEY_PREFIX}gsheet_url`) || googleSheetUrl).trim();
+      if (!url || !url.startsWith('http')) {
+        isInitialSyncDoneRef.current = true;
+        return;
+      }
       try {
-        const result = await fetchFromGoogleSheet(FIXED_GOOGLE_APPS_SCRIPT_URL);
+        const result = await fetchFromGoogleSheet(url);
         if (isMounted && result.success && result.data) {
           if (result.data.staffList && Array.isArray(result.data.staffList) && result.data.staffList.length > 0) {
             setStaffList(result.data.staffList);
@@ -738,9 +751,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
   }, []);
 
-  // 2. Auto-push all modifications directly to the fixed Google Apps Script (debounced 1.5s)
+  // 2. Auto-push all modifications directly to Google Apps Script if URL is configured (debounced 1.5s)
   useEffect(() => {
     if (!isInitialSyncDoneRef.current) return;
+    const url = (localStorage.getItem(`${LOCAL_STORAGE_KEY_PREFIX}gsheet_url`) || googleSheetUrl).trim();
+    if (!url || !url.startsWith('http')) return;
 
     if (autoPushTimerRef.current) {
       clearTimeout(autoPushTimerRef.current);
@@ -759,7 +774,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         };
 
         setSyncStatusMessage({ type: 'syncing', text: 'Đang tự động lưu lên Google Sheet...' });
-        const result = await pushToGoogleSheet(FIXED_GOOGLE_APPS_SCRIPT_URL, payload);
+        const result = await pushToGoogleSheet(url, payload);
         if (result.success) {
           const now = new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
           setLastSyncTime(now);

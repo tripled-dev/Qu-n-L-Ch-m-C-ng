@@ -31,7 +31,7 @@ interface PayslipModalProps {
 }
 
 export const PayslipModal: React.FC<PayslipModalProps> = ({ slip, onClose }) => {
-  const { savePayrollSlip, updateSlipStatus, orgSettings, showToast } = useApp();
+  const { savePayrollSlip, updateSlipStatus, orgSettings, showToast, staffList } = useApp();
   const [isEditing, setIsEditing] = useState(false);
   const [editedSlip, setEditedSlip] = useState<MonthlyPayrollSlip>({ ...slip });
   const [copied, setCopied] = useState(false);
@@ -153,10 +153,12 @@ export const PayslipModal: React.FC<PayslipModalProps> = ({ slip, onClose }) => 
   };
 
   const handleCopySummary = () => {
+    const currentStaff = staffList.find(s => s.id === editedSlip.staffId || s.code === editedSlip.staffCode);
+    const bankInfo = editedSlip.bankName || currentStaff?.bankName || '';
     const text = `📋 THÔNG BÁO PHIẾU LƯƠNG THÁNG ${formatMonthDisplay(editedSlip.month)} - TRIPLE D
 👤 Họ tên: ${editedSlip.staffName} (Mã NV: ${editedSlip.staffCode || '---'})
-🏢 Bộ phận: ${editedSlip.departmentName} - ${editedSlip.role}
-💳 STK: ${editedSlip.bankAccount || '---'} (${editedSlip.bankName || '---'})
+🏷️ Chức danh: ${editedSlip.role}
+💳 STK: ${editedSlip.bankAccount || '---'}${bankInfo ? ` (${bankInfo})` : ''}
 ---------------------------
 💰 Lương chính: ${formatVND(editedSlip.primarySalary.totalAmount)} đ (${editedSlip.primarySalary.daysOrSessions} ${editedSlip.primarySalary.unitName} × ${formatVND(editedSlip.primarySalary.unitPrice)} đ × KPI ${editedSlip.primarySalary.kpiPercent}% + Thưởng ${formatVND(editedSlip.primarySalary.bonus)} đ)
 ${editedSlip.pieceworkItems.length > 0 ? `📦 Lương sản phẩm (LTSP): ${formatVND(editedSlip.pieceworkItems.reduce((s, i) => s + i.totalAmount, 0))} đ\n` + editedSlip.pieceworkItems.map(p => `  • ${p.workName}: ${p.quantity} ${p.unit} × ${formatVND(p.unitPrice)} đ = ${formatVND(p.totalAmount)} đ`).join('\n') : ''}
@@ -172,6 +174,8 @@ Trân trọng cảm ơn sự đồng hành và cống hiến của bạn cùng T
   };
 
   const currentData = isEditing ? editedSlip : slip;
+  const currentStaff = staffList.find(s => s.id === currentData.staffId || s.code === currentData.staffCode);
+  const staffBankName = currentStaff?.bankName || '';
   const isTeachingType = currentData.formatType === 'teaching';
 
   return (
@@ -310,7 +314,7 @@ Trân trọng cảm ơn sự đồng hành và cống hiến của bạn cùng T
             <table className="w-full border-collapse border border-black text-sm sm:text-base mb-4">
               <tbody>
                 <tr className="border-b border-black">
-                  <td className="border-r border-black p-2.5 w-[70%]">
+                  <td className="border-r border-black p-2.5 w-[65%]">
                     <span>Họ tên: </span>
                     {isEditing ? (
                       <input
@@ -323,7 +327,7 @@ Trân trọng cảm ơn sự đồng hành và cống hiến của bạn cùng T
                       <span className="font-bold text-black">{currentData.staffName}</span>
                     )}
                   </td>
-                  <td className="p-2.5 w-[30%]">
+                  <td className="p-2.5 w-[35%]">
                     <span>Mã NV: </span>
                     {isEditing ? (
                       <input
@@ -338,48 +342,50 @@ Trân trọng cảm ơn sự đồng hành và cống hiến của bạn cùng T
                   </td>
                 </tr>
                 <tr>
-                  <td className="border-r border-black p-2.5">
-                    <div className="grid grid-cols-2 gap-2">
+                  <td className="border-r border-black p-2.5 w-[65%]">
+                    <span>Chức danh: </span>
+                    {isEditing ? (
+                      <input
+                        type="text"
+                        value={editedSlip.role}
+                        onChange={e => setEditedSlip({ ...editedSlip, role: e.target.value })}
+                        className="font-medium border-b border-slate-400 px-1 py-0.5 w-56"
+                      />
+                    ) : (
+                      <span className="font-medium">{currentData.role}</span>
+                    )}
+                  </td>
+                  <td className="p-2.5 w-[35%]">
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-x-2.5 gap-y-1">
                       <div>
-                        <span>Chức danh: </span>
+                        <span>Ngân hàng: </span>
                         {isEditing ? (
                           <input
                             type="text"
-                            value={editedSlip.role}
-                            onChange={e => setEditedSlip({ ...editedSlip, role: e.target.value })}
-                            className="font-medium border-b border-slate-400 px-1 py-0.5 w-28"
+                            value={editedSlip.bankName || ''}
+                            onChange={e => setEditedSlip({ ...editedSlip, bankName: e.target.value })}
+                            className="font-medium border-b border-slate-400 px-1 py-0.5 w-24"
+                            placeholder="Tên ngân hàng"
                           />
                         ) : (
-                          <span className="font-medium">{currentData.role}</span>
+                          <span className="font-medium">{currentData.bankName || staffBankName || '—'}</span>
                         )}
                       </div>
-                      <div className="border-l border-black pl-2">
-                        <span>Số TKNH: </span>
+                      <div className="sm:border-l sm:border-slate-300 sm:pl-2">
+                        <span>Số TK: </span>
                         {isEditing ? (
                           <input
                             type="text"
                             value={editedSlip.bankAccount}
                             onChange={e => setEditedSlip({ ...editedSlip, bankAccount: e.target.value })}
-                            className="font-medium border-b border-slate-400 px-1 py-0.5 w-32"
+                            className="font-medium border-b border-slate-400 px-1 py-0.5 w-28"
+                            placeholder="Số tài khoản"
                           />
                         ) : (
-                          <span className="font-medium">{currentData.bankAccount || ''}</span>
+                          <span className="font-medium">{currentData.bankAccount || '—'}</span>
                         )}
                       </div>
                     </div>
-                  </td>
-                  <td className="p-2.5">
-                    <span>Bộ Phận: </span>
-                    {isEditing ? (
-                      <input
-                        type="text"
-                        value={editedSlip.departmentName}
-                        onChange={e => setEditedSlip({ ...editedSlip, departmentName: e.target.value })}
-                        className="font-medium border-b border-slate-400 px-1 py-0.5 w-28"
-                      />
-                    ) : (
-                      <span className="font-medium">{currentData.departmentName}</span>
-                    )}
                   </td>
                 </tr>
               </tbody>
@@ -399,10 +405,12 @@ Trân trọng cảm ơn sự đồng hành và cống hiến của bạn cùng T
                       <th className="border-r border-black p-2.5 w-[15%] font-bold">Buổi</th>
                       <th className="border-r border-black p-2.5 w-[20%] font-bold">Đơn giá (Buổi)</th>
                       <th className="border-r border-black p-2.5 w-[18%] font-bold">
-                        Hiệu suất (KPI)<sup>(1)</sup>
+                        Hiệu suất<sup>(1)</sup>
                       </th>
-                      <th className="p-2.5 w-[22%] font-bold">
-                        Nhận thực tế (tháng)<sup>(2)</sup>
+                      <th className="p-2.5 w-[22%] font-bold text-center leading-tight">
+                        <span className="whitespace-nowrap">Nhận thực tế</span>
+                        <br />
+                        <span className="whitespace-nowrap font-bold text-xs sm:text-sm">(tháng)<sup>(2)</sup></span>
                       </th>
                     </tr>
                   </thead>
@@ -568,10 +576,12 @@ Trân trọng cảm ơn sự đồng hành và cống hiến của bạn cùng T
                       <th className="border-r border-black p-2.5 w-[15%] font-bold">Ngày công</th>
                       <th className="border-r border-black p-2.5 w-[20%] font-bold">Lương (ngày)</th>
                       <th className="border-r border-black p-2.5 w-[18%] font-bold">
-                        Hiệu suất (KPI)<sup>(1)</sup>
+                        Hiệu suất<sup>(1)</sup>
                       </th>
-                      <th className="p-2.5 w-[22%] font-bold">
-                        Nhận thực tế (tháng)<sup>(2)</sup>
+                      <th className="p-2.5 w-[22%] font-bold text-center leading-tight">
+                        <span className="whitespace-nowrap">Nhận thực tế</span>
+                        <br />
+                        <span className="whitespace-nowrap font-bold text-xs sm:text-sm">(tháng)<sup>(2)</sup></span>
                       </th>
                     </tr>
                   </thead>
@@ -712,7 +722,11 @@ Trân trọng cảm ơn sự đồng hành và cống hiến của bạn cùng T
                         Đơn giá<sup>(3)</sup>
                       </th>
                       <th className="border-r border-black p-2.5 w-[18%] font-bold">Hiệu suất</th>
-                      <th className="p-2.5 w-[22%] font-bold">Nhận thực tế (sản phẩm)</th>
+                      <th className="p-2.5 w-[22%] font-bold text-center leading-tight">
+                        <span className="whitespace-nowrap">Nhận thực tế</span>
+                        <br />
+                        <span className="whitespace-nowrap font-bold text-xs sm:text-sm">(sản phẩm)</span>
+                      </th>
                     </tr>
                   </thead>
                   <tbody>

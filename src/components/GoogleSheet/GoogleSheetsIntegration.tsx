@@ -27,6 +27,7 @@ import {
 export const GoogleSheetsIntegration: React.FC = () => {
   const {
     googleSheetUrl,
+    setGoogleSheetUrl,
     isSyncingGoogleSheet,
     lastSyncTime,
     syncStatusMessage,
@@ -43,15 +44,33 @@ export const GoogleSheetsIntegration: React.FC = () => {
     showToast,
   } = useApp();
 
+  const [inputUrl, setInputUrl] = useState<string>(googleSheetUrl);
   const [copiedScript, setCopiedScript] = useState(false);
   const [copiedUrl, setCopiedUrl] = useState(false);
   const [showCodePreview, setShowCodePreview] = useState(false);
   const [showClearSheetModal, setShowClearSheetModal] = useState(false);
 
-  const activeUrl = googleSheetUrl || FIXED_GOOGLE_APPS_SCRIPT_URL;
+  const handleSaveUrl = () => {
+    const trimmed = inputUrl.trim();
+    setGoogleSheetUrl(trimmed);
+    showToast(trimmed ? 'Đã lưu liên kết Google Apps Script Web App!' : 'Đã xóa URL. Chuyển sang dữ liệu mẫu 1 nhân viên.', 'success');
+  };
+
+  const handleClearUrlAndReset = () => {
+    setInputUrl('');
+    setGoogleSheetUrl('');
+    resetToSampleData();
+    showToast('Đã xóa URL và khôi phục mẫu 1 nhân viên!', 'info');
+  };
 
   const handlePull = async () => {
-    const res = await pullDataFromGoogleSheet(activeUrl);
+    const urlToUse = inputUrl.trim() || googleSheetUrl;
+    if (!urlToUse) {
+      showToast('Vui lòng nhập URL Google Apps Script trước khi tải dữ liệu!', 'warning');
+      return;
+    }
+    setGoogleSheetUrl(urlToUse);
+    const res = await pullDataFromGoogleSheet(urlToUse);
     if (res.success) {
       showToast(res.message, 'success');
     } else {
@@ -60,7 +79,13 @@ export const GoogleSheetsIntegration: React.FC = () => {
   };
 
   const handlePush = async () => {
-    const res = await pushDataToGoogleSheet(activeUrl);
+    const urlToUse = inputUrl.trim() || googleSheetUrl;
+    if (!urlToUse) {
+      showToast('Vui lòng nhập URL Google Apps Script trước khi đẩy dữ liệu!', 'warning');
+      return;
+    }
+    setGoogleSheetUrl(urlToUse);
+    const res = await pushDataToGoogleSheet(urlToUse);
     if (res.success) {
       showToast(res.message, 'success');
     } else {
@@ -69,7 +94,8 @@ export const GoogleSheetsIntegration: React.FC = () => {
   };
 
   const handleCopyUrl = () => {
-    navigator.clipboard.writeText(activeUrl);
+    const urlToCopy = inputUrl || googleSheetUrl || FIXED_GOOGLE_APPS_SCRIPT_URL;
+    navigator.clipboard.writeText(urlToCopy);
     setCopiedUrl(true);
     showToast('Đã sao chép liên kết Google Apps Script!', 'success');
     setTimeout(() => setCopiedUrl(false), 2500);
@@ -105,48 +131,82 @@ export const GoogleSheetsIntegration: React.FC = () => {
           ) : (
             <div className="flex items-center gap-2 px-3 py-1.5 bg-slate-100 text-slate-700 rounded-xl text-xs font-semibold">
               <Zap className="w-3.5 h-3.5 text-amber-600" />
-              <span>Tự động đồng bộ bật</span>
+              <span>{googleSheetUrl ? 'Tự động đồng bộ bật' : 'Chế độ Nội Bộ (Mẫu 1 NV)'}</span>
             </div>
           )}
         </div>
       </div>
 
-      {/* Main Connection & Fixed URL Card */}
+      {/* Main Connection & Dynamic Input URL Card */}
       <div id="gsheet-sync-card" className="bg-white rounded-2xl p-6 border border-slate-200 shadow-xs space-y-5">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-slate-100">
-          <div className="flex items-center gap-2">
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-emerald-100 text-emerald-800 rounded-lg text-xs font-bold">
-              <Lock className="w-3.5 h-3.5" />
-              Đã Khóa Cố Định GAS URL
-            </span>
+          <div className="flex flex-wrap items-center gap-2">
+            {googleSheetUrl ? (
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-emerald-100 text-emerald-800 rounded-lg text-xs font-bold">
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                Đã Cấu Hình URL Google Apps Script
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-amber-100 text-amber-800 rounded-lg text-xs font-bold">
+                <Users className="w-3.5 h-3.5 text-amber-600" />
+                Chưa Nhập URL - Hiển Thị Mẫu 1 Nhân Viên
+              </span>
+            )}
             <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-blue-50 text-blue-700 rounded-lg text-xs font-medium border border-blue-200/60">
               <Zap className="w-3.5 h-3.5 text-amber-500" />
-              Tự Động Ghi Nhận Mọi Chỉnh Sửa
+              Tự Động Lưu Dữ Liệu
             </span>
           </div>
 
-          <button
-            type="button"
-            onClick={handleCopyUrl}
-            className="flex items-center gap-1.5 text-xs text-slate-600 hover:text-slate-900 font-semibold px-2 py-1 rounded-md hover:bg-slate-100 transition-colors self-start cursor-pointer"
-          >
-            {copiedUrl ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
-            <span>{copiedUrl ? 'Đã chép link' : 'Sao chép link GAS'}</span>
-          </button>
+          {(inputUrl || googleSheetUrl) && (
+            <button
+              type="button"
+              onClick={handleCopyUrl}
+              className="flex items-center gap-1.5 text-xs text-slate-600 hover:text-slate-900 font-semibold px-2 py-1 rounded-md hover:bg-slate-100 transition-colors self-start cursor-pointer"
+            >
+              {copiedUrl ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
+              <span>{copiedUrl ? 'Đã chép link' : 'Sao chép link Web App'}</span>
+            </button>
+          )}
         </div>
 
         <div className="space-y-2">
-          <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">
-            Liên Kết Quản Lý Google Apps Script Cố Định
+          <label htmlFor="input-gas-web-app-url" className="block text-xs font-bold text-slate-700 uppercase tracking-wider">
+            Nhập Liên Kết Web App Google Apps Script
           </label>
-          <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-between gap-3 text-slate-800 font-mono text-xs overflow-x-auto select-all">
-            <span className="text-emerald-900 font-semibold truncate">{activeUrl}</span>
-            <span className="shrink-0 px-2 py-0.5 bg-emerald-200/80 text-emerald-900 rounded text-[11px] font-sans font-bold">
-              KẾT NỐI CHÍNH THỨC
-            </span>
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+            <input
+              id="input-gas-web-app-url"
+              type="url"
+              value={inputUrl}
+              onChange={e => setInputUrl(e.target.value)}
+              placeholder="https://script.google.com/macros/s/AKfycb.../exec"
+              className="flex-1 px-3.5 py-2.5 bg-slate-50 border border-slate-300 focus:bg-white focus:border-slate-900 focus:ring-2 focus:ring-slate-900/20 rounded-xl text-slate-900 font-mono text-xs transition-all outline-none"
+            />
+            <div className="flex items-center gap-2 shrink-0">
+              <button
+                type="button"
+                onClick={handleSaveUrl}
+                className="px-4 py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold transition-colors cursor-pointer"
+              >
+                Lưu URL
+              </button>
+              {googleSheetUrl && (
+                <button
+                  type="button"
+                  onClick={handleClearUrlAndReset}
+                  title="Xóa URL đã lưu và khôi phục mẫu 1 nhân viên"
+                  className="px-3 py-2.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200/80 rounded-xl text-xs font-semibold transition-colors cursor-pointer"
+                >
+                  Xóa URL
+                </button>
+              )}
+            </div>
           </div>
           <p className="text-xs text-slate-500 italic">
-            Tất cả thao tác chỉnh sửa nhân sự, thêm/xóa công, đánh giá KPI, phê duyệt phiếu lương và cài đặt đều được tự động lưu lên liên kết Google Apps Script này.
+            {!googleSheetUrl
+              ? '💡 Bạn chưa nhập URL Google Sheet. Ứng dụng đang ở chế độ nội bộ với dữ liệu mẫu 1 nhân viên. Nhập URL ứng dụng web Google Apps Script để kết nối và tự động lưu dữ liệu thực.'
+              : 'Tất cả thao tác chỉnh sửa nhân sự, thêm/xóa công nhật, đánh giá KPI và bảng lương sẽ được tự động đồng bộ 2 chiều với liên kết Google Sheet này.'}
           </p>
         </div>
 
@@ -330,7 +390,7 @@ export const GoogleSheetsIntegration: React.FC = () => {
         isOpen={showClearSheetModal}
         onClose={() => setShowClearSheetModal(false)}
         onConfirmClear={async () => {
-          const res = await wipeGoogleSheetAndLocalData(activeUrl);
+          const res = await wipeGoogleSheetAndLocalData(inputUrl.trim() || googleSheetUrl);
           if (res.success) {
             showToast(res.message || 'Đã xóa toàn bộ dữ liệu trên Google Sheet và ứng dụng!', 'success');
           } else {

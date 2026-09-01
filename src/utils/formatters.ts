@@ -23,6 +23,86 @@ export function formatMonthDisplay(monthStr: string): string {
 }
 
 /**
+ * Lấy kỳ lương liền trước (chuyển năm tự động, ví dụ 2026-01 -> 2025-12)
+ */
+export function getPreviousMonth(monthStr: string): string {
+  if (!monthStr || !monthStr.includes('-')) return getDefaultSalaryMonth();
+  const [yStr, mStr] = monthStr.split('-');
+  const y = parseInt(yStr, 10);
+  const m = parseInt(mStr, 10);
+  if (isNaN(y) || isNaN(m)) return getDefaultSalaryMonth();
+  
+  let prevYear = y;
+  let prevMonth = m - 1;
+  if (prevMonth < 1) {
+    prevMonth = 12;
+    prevYear -= 1;
+  }
+  return `${prevYear}-${prevMonth < 10 ? `0${prevMonth}` : prevMonth}`;
+}
+
+/**
+ * Lấy kỳ lương liền sau (chuyển năm tự động, ví dụ 2025-12 -> 2026-01)
+ */
+export function getNextMonth(monthStr: string): string {
+  if (!monthStr || !monthStr.includes('-')) return getDefaultSalaryMonth();
+  const [yStr, mStr] = monthStr.split('-');
+  const y = parseInt(yStr, 10);
+  const m = parseInt(mStr, 10);
+  if (isNaN(y) || isNaN(m)) return getDefaultSalaryMonth();
+  
+  let nextYear = y;
+  let nextMonth = m + 1;
+  if (nextMonth > 12) {
+    nextMonth = 1;
+    nextYear += 1;
+  }
+  return `${nextYear}-${nextMonth < 10 ? `0${nextMonth}` : nextMonth}`;
+}
+
+/**
+ * Danh sách năm khả dụng (bao gồm các năm có trong dữ liệu + dải năm lân cận)
+ */
+export function getAvailableYears(dataMonths: string[] = []): number[] {
+  const currentYear = new Date().getFullYear();
+  const yearsSet = new Set<number>();
+  
+  // Dải năm cơ bản từ (năm hiện tại - 3) đến (năm hiện tại + 3)
+  for (let i = currentYear - 3; i <= currentYear + 3; i++) {
+    yearsSet.add(i);
+  }
+  // Mặc định luôn có ít nhất các năm 2024, 2025, 2026, 2027
+  yearsSet.add(2024);
+  yearsSet.add(2025);
+  yearsSet.add(2026);
+  yearsSet.add(2027);
+  
+  // Thêm các năm xuất hiện trong dữ liệu thực tế
+  dataMonths.forEach(m => {
+    if (m && m.includes('-')) {
+      const y = parseInt(m.split('-')[0], 10);
+      if (!isNaN(y)) {
+        yearsSet.add(y);
+      }
+    }
+  });
+
+  return Array.from(yearsSet).sort((a, b) => a - b);
+}
+
+/**
+ * Tạo danh sách 12 tháng cho một năm cụ thể (YYYY-01 đến YYYY-12)
+ */
+export function getMonthsForYear(year: number): string[] {
+  const result: string[] = [];
+  for (let m = 1; m <= 12; m++) {
+    const mm = m < 10 ? `0${m}` : `${m}`;
+    result.push(`${year}-${mm}`);
+  }
+  return result;
+}
+
+/**
  * Xác định kỳ lương mặc định theo quy tắc:
  * - Nếu đang ở nửa đầu tháng hiện tại (ngày 1 - 15): hiển thị kỳ lương tháng trước
  * - Nếu đang ở nửa sau tháng hiện tại (ngày 16 trở đi): hiển thị kỳ lương tháng hiện tại

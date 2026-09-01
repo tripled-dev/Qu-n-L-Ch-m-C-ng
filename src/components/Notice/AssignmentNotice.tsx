@@ -5,8 +5,9 @@ import { exportElementToPDF } from '../../utils/formatters';
 import { Download, ScrollText, CheckCircle2 } from 'lucide-react';
 
 export const AssignmentNotice: React.FC = () => {
-  const { setActiveTab, orgSettings, showToast } = useApp();
+  const { setActiveTab, orgSettings, showToast, currentMonth } = useApp();
   const [isExporting, setIsExporting] = useState(false);
+  const [currentYearStr, currentMonthStr] = currentMonth ? currentMonth.split('-') : ['2026', '09'];
 
   const handleExportPDF = async () => {
     try {
@@ -71,7 +72,7 @@ export const AssignmentNotice: React.FC = () => {
                 {orgSettings.orgName || 'ÔN THI HSGQG MÔN SINH HỌC'}
               </p>
               <p className="text-xs italic text-slate-600 mt-0.5">
-                {orgSettings.location || 'Hà Nội'}, ngày 05 tháng 09 năm 2026
+                {orgSettings.location || 'Hà Nội'}, ngày 05 tháng {currentMonthStr} năm {currentYearStr}
               </p>
             </div>
           </div>

@@ -411,14 +411,14 @@ export const FIXED_GOOGLE_APPS_SCRIPT_URL =
   'https://script.google.com/macros/s/AKfycbwT6d4DFbe8DQ38ZAJqbTLn4oqNvfUPSZcgn5nJgsMR99-RW-Rt7edygms0T0q0lG8bMg/exec';
 
 export async function fetchFromGoogleSheet(
-  webAppUrl: string = FIXED_GOOGLE_APPS_SCRIPT_URL
+  webAppUrl: string = ''
 ): Promise<{ success: boolean; data?: GoogleSheetsPayload; message: string }> {
   try {
-    const cleanUrl = (webAppUrl || FIXED_GOOGLE_APPS_SCRIPT_URL).trim();
-    if (!cleanUrl.startsWith('http')) {
+    const cleanUrl = (webAppUrl || '').trim();
+    if (!cleanUrl || !cleanUrl.startsWith('http')) {
       return {
         success: false,
-        message: 'URL Ứng dụng web Google Apps Script không hợp lệ (phải bắt đầu bằng https://script.google.com/macros/s/.../exec)',
+        message: 'Chưa cấu hình URL Ứng dụng web Google Apps Script hợp lệ (bắt đầu bằng https://script.google.com/macros/s/.../exec)',
       };
     }
 
@@ -458,13 +458,13 @@ export async function fetchFromGoogleSheet(
 }
 
 export async function pushToGoogleSheet(
-  webAppUrl: string = FIXED_GOOGLE_APPS_SCRIPT_URL,
+  webAppUrl: string = '',
   payload: GoogleSheetsPayload
 ): Promise<{ success: boolean; message: string }> {
   try {
-    const cleanUrl = (webAppUrl || FIXED_GOOGLE_APPS_SCRIPT_URL).trim();
-    if (!cleanUrl.startsWith('http')) {
-      return { success: false, message: 'URL Ứng dụng web Google Apps Script không hợp lệ' };
+    const cleanUrl = (webAppUrl || '').trim();
+    if (!cleanUrl || !cleanUrl.startsWith('http')) {
+      return { success: false, message: 'Chưa cấu hình URL Ứng dụng web Google Apps Script hợp lệ' };
     }
 
     const bodyData = {
@@ -507,12 +507,12 @@ export async function pushToGoogleSheet(
 }
 
 export async function clearGoogleSheetData(
-  webAppUrl: string = FIXED_GOOGLE_APPS_SCRIPT_URL
+  webAppUrl: string = ''
 ): Promise<{ success: boolean; message: string }> {
   try {
-    const cleanUrl = (webAppUrl || FIXED_GOOGLE_APPS_SCRIPT_URL).trim();
-    if (!cleanUrl.startsWith('http')) {
-      return { success: false, message: 'URL Ứng dụng web Google Apps Script không hợp lệ' };
+    const cleanUrl = (webAppUrl || '').trim();
+    if (!cleanUrl || !cleanUrl.startsWith('http')) {
+      return { success: false, message: 'Chưa cấu hình URL Ứng dụng web Google Apps Script hợp lệ' };
     }
 
     // Pass empty payload as fallback if legacy script, plus action: clearAll

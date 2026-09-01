@@ -8,9 +8,11 @@ import {
   Printer, 
   FileSpreadsheet,
   Building2,
-  CheckCircle2
+  CheckCircle2,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react';
-import { formatMonthDisplay } from '../utils/formatters';
+import { formatMonthDisplay, getPreviousMonth, getNextMonth, getAvailableYears, getMonthsForYear } from '../utils/formatters';
 
 interface TopHeaderProps {
   onOpenMobileSidebar: () => void;
@@ -26,6 +28,9 @@ export const TopHeader: React.FC<TopHeaderProps> = ({ onOpenMobileSidebar }) => 
     generateMonthlyPayrollForStaff,
     setActiveTab,
     orgSettings,
+    payrollSlips,
+    evaluations,
+    timesheetEntries,
   } = useApp();
 
   const tabTitles: Record<string, { title: string; subtitle: string }> = {
@@ -68,16 +73,14 @@ export const TopHeader: React.FC<TopHeaderProps> = ({ onOpenMobileSidebar }) => 
     subtitle: 'Ôn Thi HSGQG Sinh Học',
   };
 
-  const availableMonths = [
-    '2026-05',
-    '2026-06',
-    '2026-07',
-    '2026-08',
-    '2026-09',
-    '2026-10',
-    '2026-11',
-    '2026-12',
+  const allDataMonths = [
+    ...payrollSlips.map(s => s.month),
+    ...evaluations.map(e => e.month),
+    ...timesheetEntries.map(t => t.month),
+    currentMonth,
   ];
+  const selectedYear = parseInt(currentMonth.split('-')[0], 10) || new Date().getFullYear();
+  const monthsForCurrentYear = getMonthsForYear(selectedYear);
 
   return (
     <header className="no-print sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-slate-200">
@@ -121,22 +124,39 @@ export const TopHeader: React.FC<TopHeaderProps> = ({ onOpenMobileSidebar }) => 
             </div>
 
             {/* Month Quick Select */}
-            <div className="flex items-center bg-slate-100 rounded-lg p-1 border border-slate-200">
+            <div className="flex items-center bg-slate-100 rounded-lg p-0.5 border border-slate-200 shadow-2xs">
               <div className="flex items-center px-1.5 py-0.5 text-slate-600 text-xs font-semibold gap-1">
                 <Calendar className="w-3.5 h-3.5 text-slate-500" />
                 <span className="hidden sm:inline">Kỳ:</span>
               </div>
+              <button
+                id="btn-header-prev-month"
+                onClick={() => setCurrentMonth(getPreviousMonth(currentMonth))}
+                title="Kỳ trước (chuyển năm tự động)"
+                className="p-1 text-slate-500 hover:text-slate-900 hover:bg-slate-200 rounded transition-colors cursor-pointer"
+              >
+                <ChevronLeft className="w-3.5 h-3.5" />
+              </button>
               <select
+                id="header-month-select"
                 value={currentMonth}
                 onChange={e => setCurrentMonth(e.target.value)}
-                className="bg-white text-slate-900 text-xs sm:text-sm font-bold py-1 px-2 rounded-md border border-slate-200 focus:outline-none focus:ring-2 focus:ring-slate-900 cursor-pointer shadow-2xs"
+                className="bg-white text-slate-900 text-xs sm:text-sm font-bold py-1 px-1.5 rounded border border-slate-200 focus:outline-none focus:ring-2 focus:ring-slate-900 cursor-pointer shadow-2xs"
               >
-                {availableMonths.map(m => (
+                {monthsForCurrentYear.map(m => (
                   <option key={m} value={m}>
-                    T{formatMonthDisplay(m)}
+                    Tháng {formatMonthDisplay(m)}
                   </option>
                 ))}
               </select>
+              <button
+                id="btn-header-next-month"
+                onClick={() => setCurrentMonth(getNextMonth(currentMonth))}
+                title="Kỳ tiếp theo (chuyển năm tự động)"
+                className="p-1 text-slate-500 hover:text-slate-900 hover:bg-slate-200 rounded transition-colors cursor-pointer"
+              >
+                <ChevronRight className="w-3.5 h-3.5" />
+              </button>
             </div>
 
             {/* Quick Calculate Button */}

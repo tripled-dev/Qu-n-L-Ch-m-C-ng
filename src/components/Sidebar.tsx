@@ -22,7 +22,7 @@ import {
   Layers,
   FileSpreadsheet
 } from 'lucide-react';
-import { formatMonthDisplay } from '../utils/formatters';
+import { formatMonthDisplay, getPreviousMonth, getNextMonth, getAvailableYears, getMonthsForYear } from '../utils/formatters';
 
 interface SidebarProps {
   isOpen: boolean;
@@ -45,6 +45,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     payrollSlips,
     staffList,
     evaluations,
+    timesheetEntries,
     monthlyStats,
     generateMonthlyPayrollForStaff,
     exportBackupJson,
@@ -63,29 +64,29 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const activeStaffCount = activeStaffList.length;
   const evaluatedStaffCount = new Set(currentMonthEvals.map(e => e.staffId)).size;
 
-  const availableMonths = [
-    '2026-05',
-    '2026-06',
-    '2026-07',
-    '2026-08',
-    '2026-09',
-    '2026-10',
-    '2026-11',
-    '2026-12',
+  // Lấy danh sách năm và tháng động (hỗ trợ đầy đủ tất cả các năm 2024, 2025, 2026, 2027, 2028...)
+  const allDataMonths = [
+    ...payrollSlips.map(s => s.month),
+    ...evaluations.map(e => e.month),
+    ...timesheetEntries.map(t => t.month),
+    currentMonth,
   ];
+  const availableYears = getAvailableYears(allDataMonths);
+  const selectedYear = parseInt(currentMonth.split('-')[0], 10) || new Date().getFullYear();
+  const selectedMonthNum = currentMonth.split('-')[1] || '01';
+  const monthsForCurrentYear = getMonthsForYear(selectedYear);
 
   const handlePrevMonth = () => {
-    const idx = availableMonths.indexOf(currentMonth);
-    if (idx > 0) {
-      setCurrentMonth(availableMonths[idx - 1]);
-    }
+    setCurrentMonth(getPreviousMonth(currentMonth));
   };
 
   const handleNextMonth = () => {
-    const idx = availableMonths.indexOf(currentMonth);
-    if (idx < availableMonths.length - 1) {
-      setCurrentMonth(availableMonths[idx + 1]);
-    }
+    setCurrentMonth(getNextMonth(currentMonth));
+  };
+
+  const handleYearChange = (yearStr: string) => {
+    const targetMonth = `${yearStr}-${selectedMonthNum}`;
+    setCurrentMonth(targetMonth);
   };
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -224,33 +225,52 @@ export const Sidebar: React.FC<SidebarProps> = ({
             <div className="space-y-1.5">
               <div className="flex items-center justify-between text-[11px] font-bold uppercase tracking-wider text-slate-400 px-1">
                 <span className="flex items-center gap-1">
-                  <Calendar className="w-3 h-3 text-amber-400" /> Kỳ Lương Đang Chọn
+                  <Calendar className="w-3 h-3 text-amber-400" /> Kỳ Lương
                 </span>
-                <span className="text-amber-400 font-mono">2026</span>
+                <select
+                  id="sidebar-year-select"
+                  value={selectedYear}
+                  onChange={e => handleYearChange(e.target.value)}
+                  className="text-amber-400 font-mono font-bold bg-slate-900 border border-slate-700/80 hover:border-amber-400/60 rounded px-1.5 py-0.5 text-xs focus:outline-none focus:ring-1 focus:ring-amber-400 cursor-pointer transition-colors"
+                  title="Chọn năm làm việc"
+                >
+                  {availableYears.map(y => (
+                    <option key={y} value={y} className="bg-slate-900 text-white font-sans">
+                      Năm {y}
+                    </option>
+                  ))}
+                </select>
               </div>
               <div className="flex items-center gap-1 bg-slate-900 rounded-lg p-1 border border-slate-700/60 shadow-inner">
                 <button
+                  id="btn-sidebar-prev-month"
                   onClick={handlePrevMonth}
-                  title="Tháng trước"
-                  className="p-1.5 text-slate-400 hover:text-white hover:bg-slate-800 rounded-md transition-colors"
+                  title="Kỳ trước (chuyển năm tự động)"
+                  className="p-1.5 text-slate-400 hover:text-white hover:bg-slate-800 rounded-md transition-colors cursor-pointer"
                 >
                   <ChevronLeft className="w-4 h-4" />
                 </button>
                 <select
+                  id="sidebar-month-select"
                   value={currentMonth}
                   onChange={e => setCurrentMonth(e.target.value)}
                   className="flex-1 bg-transparent text-center font-extrabold text-sm text-white focus:outline-none cursor-pointer"
                 >
-                  {availableMonths.map(m => (
-                    <option key={m} value={m} className="bg-slate-900 text-white">
-                      Tháng {formatMonthDisplay(m)}
-                    </option>
-                  ))}
+                  {monthsForCurrentYear.map(m => {
+                    const parts = m.split('-');
+                    const mNum = parts[1];
+                    return (
+                      <option key={m} value={m} className="bg-slate-900 text-white">
+                        Tháng {mNum}/{parts[0]}
+                      </option>
+                    );
+                  })}
                 </select>
                 <button
+                  id="btn-sidebar-next-month"
                   onClick={handleNextMonth}
-                  title="Tháng tiếp theo"
-                  className="p-1.5 text-slate-400 hover:text-white hover:bg-slate-800 rounded-md transition-colors"
+                  title="Kỳ tiếp theo (chuyển năm tự động)"
+                  className="p-1.5 text-slate-400 hover:text-white hover:bg-slate-800 rounded-md transition-colors cursor-pointer"
                 >
                   <ChevronRight className="w-4 h-4" />
                 </button>

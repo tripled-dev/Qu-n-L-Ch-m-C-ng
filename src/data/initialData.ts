@@ -361,12 +361,86 @@ export const INITIAL_CHECKLIST_TEMPLATES: ChecklistTemplate[] = [
   },
 ];
 
-// Dữ liệu mẫu khởi đầu để trống (Chỉ lấy dữ liệu thực tế từ Google Sheet hoặc người dùng nhập)
-export const INITIAL_STAFF: Staff[] = [];
+// Dữ liệu mẫu khởi đầu 1 nhân viên (khi chưa nhập URL Google Apps Script)
+export const SAMPLE_ONE_STAFF: Staff[] = [
+  {
+    id: 'staff_1',
+    code: 'TD-001',
+    fullName: 'Đặng Tuấn Anh',
+    role: 'Giảng viên Sinh học',
+    roleType: 'giang_vien',
+    roles: ['giang_vien', 'tro_giang'],
+    assignedChecklistId: 'chk_day_hoc',
+    assignedChecklistIds: ['chk_day_hoc'],
+    departmentId: 'day_hoc',
+    departmentName: 'Bộ phận Dạy Học',
+    division: 'CHUYEN_MON',
+    bankAccount: '1903456789012',
+    bankName: 'Techcombank',
+    bankOwner: 'DANG TUAN ANH',
+    phone: '0987654321',
+    email: 'tuananh.hsgqg@tripled.edu.vn',
+    salaryModel: 'session',
+    baseRate: 70000,
+    rates: {
+      teachingRate: 70000,
+      tutoringRate: 70000,
+      gradingRate: 10000,
+      dayWorkRate: 150000,
+    },
+    defaultPieceworkRates: {
+      troGiangPerSession: 70000,
+      chamBaiPerItem: 10000,
+      soanBaiPerItem: 100000,
+    },
+    isActive: true,
+  },
+];
+
+export const INITIAL_STAFF: Staff[] = SAMPLE_ONE_STAFF;
 
 export const INITIAL_PAYROLL_SLIPS: MonthlyPayrollSlip[] = [];
 
-export const INITIAL_TIMESHEET_ENTRIES: TimesheetEntry[] = [];
+export const INITIAL_TIMESHEET_ENTRIES: TimesheetEntry[] = [
+  {
+    id: 'ts_1',
+    staffId: 'staff_1',
+    month: '2026-07',
+    date: '2026-07-01',
+    type: 'teaching_session',
+    label: 'Ca dạy học chuyên môn',
+    quantity: 12,
+    unit: 'Buổi',
+    rate: 70000,
+    kpiScore: 100,
+    note: 'Mẫu 1 nhân viên ban đầu',
+  },
+];
 
-export const INITIAL_EVALUATIONS: KpiEvaluation[] = [];
+export const INITIAL_EVALUATIONS: KpiEvaluation[] = [
+  {
+    id: 'eval_1',
+    staffId: 'staff_1',
+    month: '2026-07',
+    templateId: 'chk_day_hoc',
+    evaluationDate: '2026-07-31',
+    evaluatorName: 'Đặng Tuấn Anh',
+    scores: {
+      dh_c1_1: 100,
+      dh_c1_2: 100,
+      dh_c1_3: 100,
+      dh_c2_1: 100,
+      dh_c2_2: 100,
+      dh_c3_1: 100,
+      dh_c3_2: 100,
+      dh_c3_3: 100,
+      dh_c4_1: 100,
+      dh_c4_2: 100,
+      dh_c4_3: 100,
+    },
+    calculatedTotalKpi: 100,
+    notes: 'Đánh giá mẫu 1 nhân viên',
+  },
+];
+
 
