@@ -136,7 +136,7 @@ const LOCAL_STORAGE_KEY_PREFIX = 'triple_d_payroll_v3_';
 
 export const deduplicatePayrollSlips = (slips: MonthlyPayrollSlip[]): MonthlyPayrollSlip[] => {
   if (!Array.isArray(slips)) return [];
-  const map = new Map<string, MonthlyPayrollSlip>();
+  const keyMap = new Map<string, MonthlyPayrollSlip>();
 
   slips.forEach(slip => {
     if (!slip) return;
@@ -148,27 +148,52 @@ export const deduplicatePayrollSlips = (slips: MonthlyPayrollSlip[]): MonthlyPay
 
     const key = `${normMonth}__${staffKey}`;
 
-    if (!map.has(key)) {
-      map.set(key, { ...slip, month: normMonth });
+    if (!keyMap.has(key)) {
+      keyMap.set(key, { ...slip, month: normMonth });
     } else {
-      const existing = map.get(key)!;
+      const existing = keyMap.get(key)!;
       const statusWeight = (s: MonthlyPayrollSlip) => (s.status === 'paid' ? 3 : s.status === 'approved' ? 2 : 1);
       const exWeight = statusWeight(existing);
       const newWeight = statusWeight(slip);
 
       if (newWeight > exWeight) {
-        map.set(key, { ...slip, month: normMonth });
+        keyMap.set(key, { ...slip, month: normMonth });
       } else if (newWeight === exWeight) {
         const exTime = existing.updatedAt ? new Date(existing.updatedAt).getTime() : 0;
         const newTime = slip.updatedAt ? new Date(slip.updatedAt).getTime() : 0;
         if (newTime >= exTime) {
-          map.set(key, { ...slip, month: normMonth });
+          keyMap.set(key, { ...slip, month: normMonth });
         }
       }
     }
   });
 
-  return Array.from(map.values());
+  // Phase 2: Deduplicate by slip.id to strictly prevent any duplicate IDs in the final list
+  const idMap = new Map<string, MonthlyPayrollSlip>();
+  keyMap.forEach(slip => {
+    const id = slip.id;
+    if (!id) return;
+    if (!idMap.has(id)) {
+      idMap.set(id, slip);
+    } else {
+      const existing = idMap.get(id)!;
+      const statusWeight = (s: MonthlyPayrollSlip) => (s.status === 'paid' ? 3 : s.status === 'approved' ? 2 : 1);
+      const exWeight = statusWeight(existing);
+      const newWeight = statusWeight(slip);
+
+      if (newWeight > exWeight) {
+        idMap.set(id, slip);
+      } else if (newWeight === exWeight) {
+        const exTime = existing.updatedAt ? new Date(existing.updatedAt).getTime() : 0;
+        const newTime = slip.updatedAt ? new Date(slip.updatedAt).getTime() : 0;
+        if (newTime >= exTime) {
+          idMap.set(id, slip);
+        }
+      }
+    }
+  });
+
+  return Array.from(idMap.values());
 };
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -1009,8 +1034,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
           // Org Settings & Templates
           if (result.data.orgSettings && typeof result.data.orgSettings === 'object' && Object.keys(result.data.orgSettings).length > 0) {
-            setOrgSettings(result.data.orgSettings);
-            orgSettingsRef.current = result.data.orgSettings;
+            const mergedSettings = {
+              ...result.data.orgSettings,
+              managerSignatureImg: orgSettingsRef.current.managerSignatureImg,
+              financeSignatureImg: orgSettingsRef.current.financeSignatureImg,
+            };
+            setOrgSettings(mergedSettings);
+            orgSettingsRef.current = mergedSettings;
           }
           if (result.data.checklistTemplates && Array.isArray(result.data.checklistTemplates) && result.data.checklistTemplates.length > 0) {
             setChecklistTemplates(result.data.checklistTemplates);
@@ -1392,8 +1422,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           evaluationsRef.current = result.data.evaluations;
         }
         if (result.data.orgSettings && typeof result.data.orgSettings === 'object') {
-          setOrgSettings(result.data.orgSettings);
-          orgSettingsRef.current = result.data.orgSettings;
+          const mergedSettings = {
+            ...result.data.orgSettings,
+            managerSignatureImg: orgSettingsRef.current.managerSignatureImg,
+            financeSignatureImg: orgSettingsRef.current.financeSignatureImg,
+          };
+          setOrgSettings(mergedSettings);
+          orgSettingsRef.current = mergedSettings;
         }
         if (result.data.checklistTemplates && Array.isArray(result.data.checklistTemplates) && result.data.checklistTemplates.length > 0) {
           setChecklistTemplates(result.data.checklistTemplates);

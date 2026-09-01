@@ -25,6 +25,10 @@ export const SettingsView: React.FC = () => {
   const managerImgInputRef = React.useRef<HTMLInputElement>(null);
   const financeImgInputRef = React.useRef<HTMLInputElement>(null);
 
+  React.useEffect(() => {
+    setFormData({ ...orgSettings });
+  }, [orgSettings]);
+
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
     updateOrgSettings(formData);
@@ -48,6 +52,7 @@ export const SettingsView: React.FC = () => {
         const base64 = event.target?.result as string;
         setFormData(prev => ({ ...prev, [field]: base64 }));
         showToast('Đã tải ảnh chữ ký thành công!', 'success');
+        e.target.value = ''; // Reset value to allow uploading the same image again if deleted
       };
       reader.readAsDataURL(file);
     }
