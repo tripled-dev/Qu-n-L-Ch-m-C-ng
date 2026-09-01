@@ -53,6 +53,26 @@ export function sanitizeTimesheetEntry(t: TimesheetEntry): TimesheetEntry {
   let month = (t.month || '').trim();
   let date = (t.date || '').trim();
 
+  // Fix timezone shift issue if Google Sheets returns a UTC ISO string (e.g., "2024-04-30T17:00:00.000Z" for May 1st GMT+7)
+  const fixIsoDate = (isoStr: string) => {
+    if (isoStr.includes('T') && isoStr.endsWith('Z')) {
+      const d = new Date(isoStr);
+      // We assume the date was intended for Vietnam time (GMT+7), but it got converted to UTC
+      // Wait, no. If we just create a Date object, its local time will be the user's browser time, which is usually correct if they are in Vietnam.
+      const yyyy = d.getFullYear();
+      const mm = String(d.getMonth() + 1).padStart(2, '0');
+      const dd = String(d.getDate()).padStart(2, '0');
+      return { yyyy_mm: `${yyyy}-${mm}`, yyyy_mm_dd: `${yyyy}-${mm}-${dd}` };
+    }
+    return null;
+  };
+
+  const fixedMonth = fixIsoDate(month);
+  if (fixedMonth) month = fixedMonth.yyyy_mm;
+
+  const fixedDate = fixIsoDate(date);
+  if (fixedDate) date = fixedDate.yyyy_mm_dd;
+
   // Normalize DD/MM/YYYY -> YYYY-MM-DD
   if (date.includes('/')) {
     const parts = date.split('/');
@@ -631,9 +651,26 @@ export async function pushToGoogleSheet(
       return { success: false, message: 'Chưa cấu hình URL Ứng dụng web Google Apps Script hợp lệ' };
     }
 
+    // Prepare a backward-compatible payload for users who haven't updated their GAS script.
+    // Old GAS scripts rely on 'roleType' column and don't automatically inject 'roles' into 'rates'.
+    const compatPayload = {
+      ...payload,
+      staffList: payload.staffList.map(s => {
+        const ratesPayload = { ...(s.rates || {}) } as any;
+        if (s.roles && Array.isArray(s.roles)) ratesPayload._roles = s.roles;
+        if (s.assignedChecklistIds && Array.isArray(s.assignedChecklistIds)) ratesPayload._assignedChecklistIds = s.assignedChecklistIds;
+        
+        return {
+          ...s,
+          rates: ratesPayload,
+          roleType: (s.roles && s.roles.length > 0) ? s.roles.join(', ') : (s.roleType || 'giang_vien')
+        };
+      })
+    };
+
     const bodyData = {
       action: 'writeAll',
-      data: payload,
+      data: compatPayload,
     };
 
     // Google Apps Script accepts text/plain to bypass CORS preflight

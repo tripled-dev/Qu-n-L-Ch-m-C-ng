@@ -67,10 +67,18 @@ export const GoogleSheetsIntegration: React.FC = () => {
   };
 
   const handleClearUrlAndReset = () => {
-    setInputUrl('');
-    setGoogleSheetUrl('');
-    resetToSampleData();
-    showToast('Đã xóa URL và khôi phục mẫu 1 nhân viên!', 'info');
+    showConfirm({
+      title: 'Xóa kết nối Google Sheet?',
+      message: 'Hành động này sẽ gỡ bỏ URL liên kết, đồng thời xóa toàn bộ dữ liệu cục bộ hiện tại và khôi phục về dữ liệu mẫu 1 nhân viên. Dữ liệu trên Google Sheet của bạn (nếu có) sẽ không bị ảnh hưởng. Bạn có chắc chắn không?',
+      confirmText: 'Xác nhận xóa',
+      variant: 'warning',
+      onConfirm: () => {
+        setInputUrl('');
+        setGoogleSheetUrl('');
+        resetToSampleData();
+        showToast('Đã xóa URL và khôi phục mẫu 1 nhân viên!', 'info');
+      }
+    });
   };
 
   const handlePull = async () => {
@@ -79,13 +87,22 @@ export const GoogleSheetsIntegration: React.FC = () => {
       showToast('Vui lòng nhập URL Google Apps Script trước khi tải dữ liệu!', 'warning');
       return;
     }
-    setGoogleSheetUrl(urlToUse);
-    const res = await pullDataFromGoogleSheet(urlToUse);
-    if (res.success) {
-      showToast(res.message, 'success');
-    } else {
-      showToast(res.message, 'error');
-    }
+    
+    showConfirm({
+      title: 'Tải Dữ Liệu Từ Google Sheet?',
+      message: 'Hành động này sẽ TẢI toàn bộ dữ liệu từ Google Sheet về máy, GHI ĐÈ lên các thay đổi cục bộ chưa được đồng bộ (nếu có). Bạn có chắc chắn muốn tiếp tục?',
+      confirmText: 'Tải dữ liệu',
+      variant: 'primary',
+      onConfirm: async () => {
+        setGoogleSheetUrl(urlToUse);
+        const res = await pullDataFromGoogleSheet(urlToUse);
+        if (res.success) {
+          showToast(res.message, 'success');
+        } else {
+          showToast(res.message, 'error');
+        }
+      }
+    });
   };
 
   const handlePush = async () => {
@@ -94,13 +111,22 @@ export const GoogleSheetsIntegration: React.FC = () => {
       showToast('Vui lòng nhập URL Google Apps Script trước khi đẩy dữ liệu!', 'warning');
       return;
     }
-    setGoogleSheetUrl(urlToUse);
-    const res = await pushDataToGoogleSheet(urlToUse);
-    if (res.success) {
-      showToast(res.message, 'success');
-    } else {
-      showToast(res.message, 'error');
-    }
+
+    showConfirm({
+      title: 'Đẩy Dữ Liệu Lên Google Sheet?',
+      message: 'Hành động này sẽ đẩy dữ liệu hiện tại lên Google Sheet, GHI ĐÈ dữ liệu đang có trên Sheet. Hãy chắc chắn bạn muốn lưu phiên bản hiện tại lên máy chủ. Tiếp tục?',
+      confirmText: 'Đẩy dữ liệu',
+      variant: 'primary',
+      onConfirm: async () => {
+        setGoogleSheetUrl(urlToUse);
+        const res = await pushDataToGoogleSheet(urlToUse);
+        if (res.success) {
+          showToast(res.message, 'success');
+        } else {
+          showToast(res.message, 'error');
+        }
+      }
+    });
   };
 
   const handleCopyUrl = () => {
