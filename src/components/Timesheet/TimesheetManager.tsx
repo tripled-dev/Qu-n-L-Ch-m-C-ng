@@ -729,7 +729,9 @@ export const TimesheetManager: React.FC = () => {
                 <thead>
                   <tr className="bg-slate-900 text-white font-bold uppercase tracking-wider text-[11px]">
                     <th className="py-3 px-4 min-w-[200px]">Nhân sự & Vai trò</th>
-                    <th className="py-3 px-2 text-center min-w-[80px]">Bảng kiểm</th>
+                    <th className="py-3 px-2 text-center min-w-[130px] bg-slate-800 text-amber-200">
+                      Bảng Kiểm & KPI <span className="text-[9px] font-normal block text-amber-300">(Chấm tại đây)</span>
+                    </th>
                     <th className="py-3 px-2 text-center bg-blue-950/80 min-w-[95px] text-blue-200">
                       1. Dạy Học <span className="text-[9px] font-normal block text-blue-300">(Buổi)</span>
                     </th>

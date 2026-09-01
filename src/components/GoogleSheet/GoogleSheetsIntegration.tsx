@@ -182,7 +182,7 @@ export const GoogleSheetsIntegration: React.FC = () => {
               <span className="text-xs font-bold text-slate-800">Mở Apps Script</span>
             </div>
             <p className="text-xs text-slate-600 leading-relaxed">
-              Mở Google Sheet mới $\rightarrow$ Chọn <strong>Tiện ích mở rộng</strong> $\rightarrow$ <strong>Apps Script</strong>.
+              Mở Google Sheet mới <span className="text-slate-400 font-bold mx-1">→</span> Chọn <strong>Tiện ích mở rộng</strong> <span className="text-slate-400 font-bold mx-1">→</span> <strong>Apps Script</strong>.
             </p>
           </div>
 
@@ -192,7 +192,7 @@ export const GoogleSheetsIntegration: React.FC = () => {
               <span className="text-xs font-bold text-slate-800">Dán Mã & Lưu</span>
             </div>
             <p className="text-xs text-slate-600 leading-relaxed">
-              Xóa code cũ trong file <code>Code.gs</code>, dán mã vừa sao chép vào $\rightarrow$ Nhấn <strong>Lưu (Ctrl+S)</strong>.
+              Xóa code cũ trong file <code>Code.gs</code>, dán mã vừa sao chép vào <span className="text-slate-400 font-bold mx-1">→</span> Nhấn <strong>Lưu (Ctrl+S)</strong>.
             </p>
           </div>
 
@@ -202,7 +202,7 @@ export const GoogleSheetsIntegration: React.FC = () => {
               <span className="text-xs font-bold text-slate-800">Triển Khai Web App</span>
             </div>
             <p className="text-xs text-slate-600 leading-relaxed">
-              Bấm <strong>Triển khai mới</strong> $\rightarrow$ Chọn <strong>Ứng dụng web</strong> $\rightarrow$ Quyền truy cập: <strong>Bất kỳ ai</strong> $\rightarrow$ Copy link dán vào ô trên.
+              Bấm <strong>Triển khai mới</strong> <span className="text-slate-400 font-bold mx-1">→</span> Chọn <strong>Ứng dụng web</strong> <span className="text-slate-400 font-bold mx-1">→</span> Quyền truy cập: <strong>Bất kỳ ai</strong> <span className="text-slate-400 font-bold mx-1">→</span> Copy link dán vào ô trên.
             </p>
           </div>
         </div>

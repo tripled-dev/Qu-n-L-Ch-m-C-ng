@@ -125,13 +125,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
           badge: `${monthlyStats.totalSessions} buổi`,
           badgeColor: 'bg-sky-500/20 text-sky-300 border border-sky-500/30',
         },
-        {
-          id: 'evaluation',
-          name: 'Đánh Giá KPI Bảng Kiểm',
-          icon: CheckSquare,
-          badge: `${evaluatedStaffCount}/${activeStaffCount}`,
-          badgeColor: 'bg-amber-500/20 text-amber-300 border border-amber-500/30',
-        },
       ],
     },
     {
