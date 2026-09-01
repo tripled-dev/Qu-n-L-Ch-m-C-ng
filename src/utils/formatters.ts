@@ -1,4 +1,4 @@
-import html2canvas from 'html2canvas';
+import { toPng } from 'html-to-image';
 import jsPDF from 'jspdf';
 import { ChecklistTemplate } from '../types';
 
@@ -80,20 +80,23 @@ export async function exportElementToPDF(elementId: string, fileName: string) {
   }
 
   try {
-    const canvas = await html2canvas(element, {
-      scale: 2,
-      useCORS: true,
-      allowTaint: true,
+    if (document.fonts?.ready) {
+      await document.fonts.ready;
+    }
+
+    const dataUrl = await toPng(element, {
+      quality: 0.98,
+      pixelRatio: 2,
       backgroundColor: '#ffffff',
-      logging: false,
-      onclone: (_clonedDoc, clonedElement) => {
-        // Ensure element is styled clearly for export
-        clonedElement.style.maxWidth = '780px';
-        clonedElement.style.margin = '0 auto';
-      },
+      cacheBust: false,
     });
 
-    const dataUrl = canvas.toDataURL('image/png', 1.0);
+    const img = new Image();
+    img.src = dataUrl;
+    await new Promise((resolve, reject) => {
+      img.onload = () => resolve(true);
+      img.onerror = reject;
+    });
 
     const pdf = new jsPDF({
       orientation: 'portrait',
@@ -111,7 +114,7 @@ export async function exportElementToPDF(elementId: string, fileName: string) {
     const printableHeight = pdfPageHeight - marginY * 2; // 281mm
 
     const imgWidth = printableWidth;
-    const imgHeight = (canvas.height * printableWidth) / canvas.width;
+    const imgHeight = (img.naturalHeight * printableWidth) / img.naturalWidth;
 
     if (imgHeight <= printableHeight) {
       // Single page document
@@ -148,19 +151,16 @@ export async function exportElementToPNG(elementId: string, fileName: string) {
   }
 
   try {
-    const canvas = await html2canvas(element, {
-      scale: 2.5,
-      useCORS: true,
-      allowTaint: true,
-      backgroundColor: '#ffffff',
-      logging: false,
-      onclone: (_clonedDoc, clonedElement) => {
-        clonedElement.style.maxWidth = '780px';
-        clonedElement.style.margin = '0 auto';
-      },
-    });
+    if (document.fonts?.ready) {
+      await document.fonts.ready;
+    }
 
-    const dataUrl = canvas.toDataURL('image/png', 1.0);
+    const dataUrl = await toPng(element, {
+      quality: 0.98,
+      pixelRatio: 2.5,
+      backgroundColor: '#ffffff',
+      cacheBust: false,
+    });
 
     const link = document.createElement('a');
     link.download = fileName.endsWith('.png') ? fileName : `${fileName}.png`;
