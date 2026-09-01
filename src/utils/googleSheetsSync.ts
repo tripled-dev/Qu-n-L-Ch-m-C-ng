@@ -388,11 +388,19 @@ function formatHeaderRow(sheet, bgColor) {
 }
 `;
 
-export async function fetchFromGoogleSheet(webAppUrl: string): Promise<{ success: boolean; data?: GoogleSheetsPayload; message: string }> {
+export const FIXED_GOOGLE_APPS_SCRIPT_URL =
+  'https://script.google.com/macros/s/AKfycbwT6d4DFbe8DQ38ZAJqbTLn4oqNvfUPSZcgn5nJgsMR99-RW-Rt7edygms0T0q0lG8bMg/exec';
+
+export async function fetchFromGoogleSheet(
+  webAppUrl: string = FIXED_GOOGLE_APPS_SCRIPT_URL
+): Promise<{ success: boolean; data?: GoogleSheetsPayload; message: string }> {
   try {
-    const cleanUrl = webAppUrl.trim();
+    const cleanUrl = (webAppUrl || FIXED_GOOGLE_APPS_SCRIPT_URL).trim();
     if (!cleanUrl.startsWith('http')) {
-      return { success: false, message: 'URL Ứng dụng web Google Apps Script không hợp lệ (phải bắt đầu bằng https://script.google.com/macros/s/.../exec)' };
+      return {
+        success: false,
+        message: 'URL Ứng dụng web Google Apps Script không hợp lệ (phải bắt đầu bằng https://script.google.com/macros/s/.../exec)',
+      };
     }
 
     const targetUrl = cleanUrl.includes('?') ? `${cleanUrl}&action=readAll` : `${cleanUrl}?action=readAll`;
@@ -431,11 +439,11 @@ export async function fetchFromGoogleSheet(webAppUrl: string): Promise<{ success
 }
 
 export async function pushToGoogleSheet(
-  webAppUrl: string,
+  webAppUrl: string = FIXED_GOOGLE_APPS_SCRIPT_URL,
   payload: GoogleSheetsPayload
 ): Promise<{ success: boolean; message: string }> {
   try {
-    const cleanUrl = webAppUrl.trim();
+    const cleanUrl = (webAppUrl || FIXED_GOOGLE_APPS_SCRIPT_URL).trim();
     if (!cleanUrl.startsWith('http')) {
       return { success: false, message: 'URL Ứng dụng web Google Apps Script không hợp lệ' };
     }

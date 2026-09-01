@@ -6,6 +6,14 @@
   }
 }
 
+#printable-payslip-content,
+#printable-assignment-notice,
+.payslip-times-roman,
+#printable-payslip-content *,
+#printable-assignment-notice * {
+  font-family: 'Times New Roman', Times, 'Liberation Serif', serif;
+}
+
 @media print {
   @page {
     size: A4 portrait;

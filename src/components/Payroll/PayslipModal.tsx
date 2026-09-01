@@ -179,27 +179,27 @@ Trân trọng cảm ơn sự đồng hành và cống hiến của bạn cùng T
       <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[96vh] flex flex-col overflow-hidden border border-slate-200">
         
         {/* Modal Top Control Bar (Hidden on Print) */}
-        <div className="no-print flex items-center justify-between px-4 sm:px-6 py-3.5 bg-slate-900 text-white border-b border-slate-800">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-amber-500/20 text-amber-300 flex items-center justify-center font-bold text-sm">
+        <div className="no-print flex items-center justify-between px-3 sm:px-6 py-3 bg-slate-900 text-white border-b border-slate-800 gap-2">
+          <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 flex-1">
+            <div className="w-8 h-8 rounded-lg bg-amber-500/20 text-amber-300 flex items-center justify-center font-bold text-sm shrink-0">
               3D
             </div>
-            <div>
-              <h3 className="font-bold text-sm sm:text-base text-white">
+            <div className="min-w-0">
+              <h3 className="font-bold text-xs sm:text-base text-white whitespace-nowrap overflow-hidden text-ellipsis">
                 Phiếu Lương: {currentData.staffName}
               </h3>
-              <p className="text-xs text-slate-400">
+              <p className="text-[11px] sm:text-xs text-slate-400 whitespace-nowrap overflow-hidden text-ellipsis">
                 Tháng {formatMonthDisplay(currentData.month)} • {currentData.departmentName}
               </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-1.5 sm:gap-2">
+          <div className="flex items-center gap-1 sm:gap-1.5 shrink-0 flex-nowrap">
             {/* Status switcher */}
             <select
               value={currentData.status}
               onChange={e => updateSlipStatus(currentData.id, e.target.value as any)}
-              className={`text-xs font-bold py-1 px-2.5 rounded-lg border cursor-pointer ${
+              className={`text-xs font-bold py-1.5 px-2 rounded-lg border cursor-pointer whitespace-nowrap shrink-0 ${
                 currentData.status === 'paid'
                   ? 'bg-emerald-950 text-emerald-300 border-emerald-700'
                   : currentData.status === 'approved'
@@ -218,7 +218,7 @@ Trân trọng cảm ơn sự đồng hành và cống hiến của bạn cùng T
                 if (isEditing) handleSave();
                 else setIsEditing(true);
               }}
-              className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${
+              className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap shrink-0 transition-colors cursor-pointer ${
                 isEditing
                   ? 'bg-emerald-600 hover:bg-emerald-700 text-white'
                   : 'bg-slate-800 hover:bg-slate-700 text-slate-200'
@@ -226,13 +226,13 @@ Trân trọng cảm ơn sự đồng hành và cống hiến của bạn cùng T
             >
               {isEditing ? (
                 <>
-                  <Save className="w-3.5 h-3.5" />
-                  <span>Lưu</span>
+                  <Save className="w-3.5 h-3.5 shrink-0" />
+                  <span className="whitespace-nowrap">Lưu</span>
                 </>
               ) : (
                 <>
-                  <Edit3 className="w-3.5 h-3.5" />
-                  <span className="hidden sm:inline">Chỉnh Sửa</span>
+                  <Edit3 className="w-3.5 h-3.5 shrink-0" />
+                  <span className="whitespace-nowrap">Chỉnh sửa</span>
                 </>
               )}
             </button>
@@ -240,49 +240,49 @@ Trân trọng cảm ơn sự đồng hành và cống hiến của bạn cùng T
             {/* Print button */}
             <button
               onClick={handlePrint}
-              className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-200 cursor-pointer"
+              className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-200 cursor-pointer whitespace-nowrap shrink-0"
               title="In phiếu lương chuẩn A4"
             >
-              <Printer className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">In</span>
+              <Printer className="w-3.5 h-3.5 shrink-0" />
+              <span className="hidden sm:inline whitespace-nowrap">In</span>
             </button>
 
             {/* Export PDF */}
             <button
               onClick={handleExportPDF}
               disabled={isExporting}
-              className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-200 cursor-pointer"
+              className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-200 cursor-pointer whitespace-nowrap shrink-0"
               title="Tải file PDF"
             >
-              <Download className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">PDF</span>
+              <Download className="w-3.5 h-3.5 shrink-0" />
+              <span className="hidden sm:inline whitespace-nowrap">PDF</span>
             </button>
 
             {/* Export PNG */}
             <button
               onClick={handleExportPNG}
               disabled={isExporting}
-              className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-200 cursor-pointer"
+              className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-200 cursor-pointer whitespace-nowrap shrink-0"
               title="Tải ảnh PNG gửi Zalo"
             >
-              <ImageIcon className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Ảnh</span>
+              <ImageIcon className="w-3.5 h-3.5 shrink-0" />
+              <span className="hidden sm:inline whitespace-nowrap">Ảnh</span>
             </button>
 
             {/* Copy Summary */}
             <button
               onClick={handleCopySummary}
-              className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-200 cursor-pointer"
+              className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-200 cursor-pointer whitespace-nowrap shrink-0"
               title="Sao chép nội dung tóm tắt để gửi Zalo"
             >
-              {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
-              <span className="hidden sm:inline">{copied ? 'Đã chép' : 'Copy'}</span>
+              {copied ? <Check className="w-3.5 h-3.5 text-emerald-400 shrink-0" /> : <Copy className="w-3.5 h-3.5 shrink-0" />}
+              <span className="hidden sm:inline whitespace-nowrap">{copied ? 'Đã chép' : 'Copy'}</span>
             </button>
 
             {/* Close */}
             <button
               onClick={onClose}
-              className="p-1.5 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors ml-1 cursor-pointer"
+              className="p-1.5 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors ml-0.5 shrink-0 cursor-pointer"
             >
               <X className="w-5 h-5" />
             </button>
@@ -295,18 +295,19 @@ Trân trọng cảm ơn sự đồng hành và cống hiến của bạn cùng T
           {/* Authentic Document Sheet (Print Area) */}
           <div
             id="printable-payslip-content"
-            className="print-container bg-white w-full max-w-[780px] p-5 sm:p-7 shadow-sm sm:rounded-xl border border-slate-300 text-slate-900 font-serif leading-normal my-auto"
+            style={{ fontFamily: "'Times New Roman', Times, 'Liberation Serif', serif" }}
+            className="print-container payslip-times-roman bg-white w-full max-w-[780px] p-5 sm:p-7 shadow-sm sm:rounded-xl border border-slate-300 text-slate-900 font-serif leading-normal my-auto"
           >
             
             {/* Title Header */}
             <div className="text-center mb-4">
-              <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-black uppercase font-sans">
+              <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-black uppercase">
                 Phiếu Lương Tháng {formatMonthDisplay(currentData.month)}
               </h1>
             </div>
 
             {/* Header Info Table (Border Solid) */}
-            <table className="w-full border-collapse border border-black text-sm sm:text-base mb-4 font-sans">
+            <table className="w-full border-collapse border border-black text-sm sm:text-base mb-4">
               <tbody>
                 <tr className="border-b border-black">
                   <td className="border-r border-black p-2.5 w-[70%]">
@@ -387,11 +388,11 @@ Trân trọng cảm ơn sự đồng hành và cống hiến của bạn cùng T
             {/* FORMAT 1: MẪU LƯƠNG DẠY HỌC */}
             {isTeachingType && (
               <div>
-                <h4 className="font-bold text-sm sm:text-base mb-2 font-sans text-black">
+                <h4 className="font-bold text-sm sm:text-base mb-2 text-black">
                   Thành phần lương:
                 </h4>
 
-                <table className="w-full border-collapse border border-black text-sm sm:text-base mb-6 font-sans">
+                <table className="w-full border-collapse border border-black text-sm sm:text-base mb-6">
                   <thead>
                     <tr className="bg-slate-50 border-b border-black text-center font-bold">
                       <th className="border-r border-black p-2.5 w-[25%] font-bold">Thành phần</th>
@@ -556,11 +557,11 @@ Trân trọng cảm ơn sự đồng hành và cống hiến của bạn cùng T
             {!isTeachingType && (
               <div>
                 {/* 1. Lương chính */}
-                <h4 className="font-bold text-sm sm:text-base mb-2 font-sans text-black">
+                <h4 className="font-bold text-sm sm:text-base mb-2 text-black">
                   Lương chính: (1)
                 </h4>
 
-                <table className="w-full border-collapse border border-black text-sm sm:text-base mb-4 font-sans">
+                <table className="w-full border-collapse border border-black text-sm sm:text-base mb-4">
                   <thead>
                     <tr className="bg-slate-50 border-b border-black text-center font-bold">
                       <th className="border-r border-black p-2.5 w-[25%] font-bold">Thành phần</th>
@@ -689,7 +690,7 @@ Trân trọng cảm ơn sự đồng hành và cống hiến của bạn cùng T
 
                 {/* 2. Lương theo sản phẩm (LTSP) */}
                 <div className="flex items-center justify-between mb-2">
-                  <h4 className="font-bold text-sm sm:text-base font-sans text-black">
+                  <h4 className="font-bold text-sm sm:text-base text-black">
                     Lương theo sản phẩm (LTSP): (2)
                   </h4>
                   {isEditing && (
@@ -702,7 +703,7 @@ Trân trọng cảm ơn sự đồng hành và cống hiến của bạn cùng T
                   )}
                 </div>
 
-                <table className="w-full border-collapse border border-black text-sm sm:text-base mb-6 font-sans">
+                <table className="w-full border-collapse border border-black text-sm sm:text-base mb-6">
                   <thead>
                     <tr className="bg-slate-50 border-b border-black text-center font-bold">
                       <th className="border-r border-black p-2.5 w-[25%] font-bold">Công việc</th>
@@ -823,29 +824,32 @@ Trân trọng cảm ơn sự đồng hành và cống hiến của bạn cùng T
 
             {/* Notes Section (Solid border) */}
             {(() => {
-              const cleanNote = (text?: string, prefix?: string) => {
-                if (!text) return '';
+              const cleanNote = (text?: string, prefix?: string, fallback?: string) => {
+                if (!text) return fallback || '';
                 let cleaned = text;
                 if (prefix && cleaned.startsWith(prefix)) {
                   cleaned = cleaned.slice(prefix.length).trim();
                 }
                 // Also remove general (1): / (2): / (3): prefixes if present
                 cleaned = cleaned.replace(/^\(\d+\):\s*/, '').trim();
+                if (cleaned.includes('5 hạng mục chuẩn')) {
+                  return 'Đơn giá tính theo thỏa thuận ban đầu';
+                }
                 return cleaned;
               };
               return (
-                <div className="border border-black p-3 text-xs sm:text-sm mb-5 font-sans text-slate-900 space-y-1 leading-relaxed">
+                <div className="border border-black p-3 text-xs sm:text-sm mb-5 text-slate-900 space-y-1 leading-relaxed">
                   <div className="grid grid-cols-[100px_1fr] items-start">
                     <div className="font-bold">Chú thích</div>
                     <div className="space-y-1">
                       <p>
-                        <strong>(1):</strong> {cleanNote(currentData.notes?.note1, '(1):')}
+                        <strong>(1):</strong> {cleanNote(currentData.notes?.note1, '(1):', isTeachingType ? 'Đánh giá dựa trên “Bảng Kiểm” tương ứng. KPI là giá trị % chất lượng công việc trong tháng.' : 'Đánh giá dựa trên “Bảng Kiểm” tương ứng.')}
                       </p>
                       <p>
-                        <strong>(2):</strong> {cleanNote(currentData.notes?.note2, '(2):')}
+                        <strong>(2):</strong> {cleanNote(currentData.notes?.note2, '(2):', isTeachingType ? 'Lương nhận thực tế là “Số lượng × Đơn Giá × KPI”' : 'Lương nhận thực tế là “Khối lượng (Ngày/Buổi/Bài) × Đơn Giá × KPI”')}
                       </p>
                       <p>
-                        <strong>(3):</strong> {cleanNote(currentData.notes?.note3, '(3):')}
+                        <strong>(3):</strong> {cleanNote(currentData.notes?.note3, '(3):', isTeachingType ? 'Đơn giá có thể tùy chỉnh linh hoạt theo từng nhân sự & ca dạy' : 'Đơn giá tính theo thỏa thuận ban đầu')}
                       </p>
                     </div>
                   </div>
@@ -854,7 +858,7 @@ Trân trọng cảm ơn sự đồng hành và cống hiến của bạn cùng T
             })()}
 
             {/* Signatures Area */}
-            <div className="grid grid-cols-2 gap-8 text-center pt-2 font-sans">
+            <div className="grid grid-cols-2 gap-8 text-center pt-2">
               
               {/* Manager Column */}
               <div className="flex flex-col items-center">

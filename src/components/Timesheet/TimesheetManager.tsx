@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useApp } from '../../context/AppContext';
-import { TimesheetEntry, Staff } from '../../types';
+import { Staff, TimesheetEntry } from '../../types';
 import { 
   STAFF_ROLE_DEFINITIONS, 
   STAFF_ROLE_LIST, 
@@ -13,27 +13,17 @@ import { formatVND, formatMonthDisplay, calculateKpiFromScores } from '../../uti
 import { KpiEvaluatorModal } from '../Evaluation/KpiEvaluatorModal';
 import { 
   Clock, 
-  Plus, 
-  Trash2, 
   Edit, 
-  Calendar, 
-  CheckCircle, 
-  Filter, 
   BookOpen, 
   FileCheck, 
-  Sparkles, 
-  LayoutGrid, 
-  List, 
   CheckSquare, 
-  RefreshCw, 
   TrendingUp, 
   Search, 
   Check, 
-  Save, 
   Users, 
-  Award, 
   DollarSign,
-  Gift
+  Filter,
+  RefreshCw
 } from 'lucide-react';
 
 export const TimesheetManager: React.FC = () => {
@@ -43,27 +33,18 @@ export const TimesheetManager: React.FC = () => {
     currentMonth, 
     checklistTemplates,
     evaluations,
-    addTimesheetEntry, 
-    updateTimesheetEntry, 
+    addTimesheetEntry,
+    updateTimesheetEntry,
     deleteTimesheetEntry,
     bulkUpdateStaffWorkload,
     generateMonthlyPayrollForStaff,
-    savePayrollSlip,
     payrollSlips
   } = useApp();
 
-  // View Mode: 'matrix' (Bảng ma trận tập trung 5 mục) | 'logs' (Nhật ký chi tiết)
-  const [viewMode, setViewMode] = useState<'matrix' | 'logs'>('matrix');
-
   const [selectedRoleFilter, setSelectedRoleFilter] = useState<string>('all');
   const [searchTerm, setSearchTerm] = useState<string>('');
-  const [selectedStaffFilter, setSelectedStaffFilter] = useState<string>('all');
-  const [selectedTypeFilter, setSelectedTypeFilter] = useState<string>('all');
   
-  // Single Log Modal State
-  const [showSingleModal, setShowSingleModal] = useState<boolean>(false);
   const [evaluatingTarget, setEvaluatingTarget] = useState<{ staff: Staff; templateId: string } | null>(null);
-  const [editingEntry, setEditingEntry] = useState<TimesheetEntry | null>(null);
 
   // Quick Bulk Workload Modal State (Strictly 5 Billable Items)
   const [bulkStaff, setBulkStaff] = useState<Staff | null>(null);
@@ -433,89 +414,6 @@ export const TimesheetManager: React.FC = () => {
     setTimeout(() => setSavedFeedback(null), 3000);
   };
 
-  // Form for Single Log Modal
-  const [singleForm, setSingleForm] = useState({
-    staffId: staffList[0]?.id || '',
-    date: `${currentMonth}-15`,
-    type: 'teaching_session' as TimesheetEntry['type'],
-    label: '',
-    quantity: 1,
-    unit: 'Buổi',
-    rate: 70000,
-    kpiScore: 100,
-    note: '',
-  });
-
-  const handleOpenSingleModal = (entry?: TimesheetEntry) => {
-    if (entry) {
-      setEditingEntry(entry);
-      setSingleForm({
-        staffId: entry.staffId,
-        date: entry.date,
-        type: entry.type,
-        label: entry.label,
-        quantity: entry.quantity,
-        unit: entry.unit,
-        rate: entry.rate,
-        kpiScore: entry.kpiScore || 100,
-        note: entry.note || '',
-      });
-    } else {
-      setEditingEntry(null);
-      const targetStaff = staffList[0];
-      const rates = targetStaff ? getStaffDutyRates(targetStaff) : { teachingRate: 70000 };
-
-      setSingleForm({
-        staffId: targetStaff?.id || '',
-        date: `${currentMonth}-15`,
-        type: 'teaching_session',
-        label: 'Giảng dạy chuyên môn HSGQG',
-        quantity: 1,
-        unit: 'Buổi',
-        rate: rates.teachingRate,
-        kpiScore: 100,
-        note: '',
-      });
-    }
-    setShowSingleModal(true);
-  };
-
-  const handleSaveSingleEntry = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!singleForm.staffId) return;
-
-    if (editingEntry) {
-      updateTimesheetEntry({
-        ...editingEntry,
-        staffId: singleForm.staffId,
-        date: singleForm.date,
-        type: singleForm.type,
-        label: singleForm.label || 'Công việc hoàn thành',
-        quantity: Number(singleForm.quantity),
-        unit: singleForm.unit,
-        rate: Number(singleForm.rate),
-        kpiScore: Number(singleForm.kpiScore),
-        note: singleForm.note,
-      });
-    } else {
-      addTimesheetEntry({
-        staffId: singleForm.staffId,
-        month: currentMonth,
-        date: singleForm.date,
-        type: singleForm.type,
-        label: singleForm.label || 'Công việc hoàn thành',
-        quantity: Number(singleForm.quantity),
-        unit: singleForm.unit,
-        rate: Number(singleForm.rate),
-        kpiScore: Number(singleForm.kpiScore),
-        note: singleForm.note,
-      });
-    }
-
-    generateMonthlyPayrollForStaff(currentMonth);
-    setShowSingleModal(false);
-  };
-
   // Filtered Matrix List
   const filteredMatrix = staffWorkloadMatrix.filter(({ staff, roleType }) => {
     if (selectedRoleFilter !== 'all' && roleType !== selectedRoleFilter) return false;
@@ -531,7 +429,7 @@ export const TimesheetManager: React.FC = () => {
   return (
     <div className="space-y-5">
       
-      {/* Top Header & View Switcher */}
+      {/* Top Header */}
       <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h2 className="text-lg sm:text-xl font-black text-slate-900 flex items-center gap-2">
@@ -543,39 +441,18 @@ export const TimesheetManager: React.FC = () => {
           </p>
         </div>
 
-        {/* View Switcher Tabs */}
         <div className="flex items-center gap-2">
-          <div className="flex bg-slate-100 p-1 rounded-xl border border-slate-200 text-xs font-bold">
-            <button
-              onClick={() => setViewMode('matrix')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
-                viewMode === 'matrix'
-                  ? 'bg-white text-slate-900 shadow-xs'
-                  : 'text-slate-700 hover:text-slate-900'
-              }`}
-            >
-              <LayoutGrid className="w-3.5 h-3.5" />
-              <span>Bảng Tập Trung 5 Mục</span>
-            </button>
-            <button
-              onClick={() => setViewMode('logs')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
-                viewMode === 'logs'
-                  ? 'bg-white text-slate-900 shadow-xs'
-                  : 'text-slate-700 hover:text-slate-900'
-              }`}
-            >
-              <List className="w-3.5 h-3.5" />
-              <span>Nhật Ký Ca Lẻ ({monthTimesheets.length})</span>
-            </button>
-          </div>
-
           <button
-            onClick={() => handleOpenSingleModal()}
-            className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold rounded-lg shadow-xs cursor-pointer"
+            onClick={() => {
+              generateMonthlyPayrollForStaff(currentMonth);
+              setSavedFeedback('Đã đồng bộ toàn bộ khối lượng sang phiếu lương tháng!');
+              setTimeout(() => setSavedFeedback(null), 3000);
+            }}
+            className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-lg text-xs font-bold transition-colors cursor-pointer shadow-xs"
+            title="Đồng bộ lại công thức và khối lượng sang phiếu lương"
           >
-            <Plus className="w-4 h-4" />
-            <span>Thêm Ca Lẻ</span>
+            <RefreshCw className="w-3.5 h-3.5 text-amber-300" />
+            <span>Đồng Bộ Bảng Lương</span>
           </button>
         </div>
       </div>
@@ -663,12 +540,11 @@ export const TimesheetManager: React.FC = () => {
 
       </div>
 
-      {/* VIEW 1: MONTHLY WORKLOAD MATRIX (BẢNG CHẤM CÔNG TẬP TRUNG) */}
-      {viewMode === 'matrix' && (
-        <div className="space-y-4">
-          
-          {/* Controls Bar: Filters & Search */}
-          <div className="bg-white rounded-xl border border-slate-200 p-3 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-3">
+      {/* MONTHLY WORKLOAD MATRIX (BẢNG CHẤM CÔNG THEO VAI TRÒ) */}
+      <div className="space-y-4">
+        
+        {/* Controls Bar: Filters & Search */}
+        <div className="bg-white rounded-xl border border-slate-200 p-3 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-3">
             
             {/* Role Filter Dropdown Select */}
             <div className="flex items-center gap-2">
@@ -973,75 +849,6 @@ export const TimesheetManager: React.FC = () => {
           </div>
 
         </div>
-      )}
-
-      {/* VIEW 2: LOGS LIST */}
-      {viewMode === 'logs' && (
-        <div className="space-y-4">
-          <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-xs overflow-hidden">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="font-bold text-base text-slate-900">
-                Nhật Ký Ca Lẻ Chi Tiết ({monthTimesheets.length} bản ghi)
-              </h3>
-            </div>
-
-            {monthTimesheets.length === 0 ? (
-              <div className="p-8 text-center text-slate-500 text-xs">
-                Chưa có ca lẻ nào trong tháng. Sử dụng Bảng Tập Trung 5 Mục để nhập nhanh khối lượng.
-              </div>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs">
-                  <thead>
-                    <tr className="bg-slate-50 text-slate-700 font-bold border-b border-slate-200">
-                      <th className="py-2.5 px-3">Ngày</th>
-                      <th className="py-2.5 px-3">Nhân sự</th>
-                      <th className="py-2.5 px-3">Hạng mục (1 trong 5)</th>
-                      <th className="py-2.5 px-3 text-center">Số lượng</th>
-                      <th className="py-2.5 px-3 text-right">Đơn giá</th>
-                      <th className="py-2.5 px-3 text-right">Thành tiền</th>
-                      <th className="py-2.5 px-3 text-center">Thao tác</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100">
-                    {monthTimesheets.map(entry => {
-                      const staff = staffList.find(s => s.id === entry.staffId);
-                      return (
-                        <tr key={entry.id} className="hover:bg-slate-50">
-                          <td className="py-2 px-3 font-mono">{entry.date}</td>
-                          <td className="py-2 px-3 font-bold text-slate-900">{staff?.fullName || '---'}</td>
-                          <td className="py-2 px-3">{entry.label}</td>
-                          <td className="py-2 px-3 text-center font-bold font-mono">{entry.quantity} {entry.unit}</td>
-                          <td className="py-2 px-3 text-right font-mono">{formatVND(entry.rate)} đ</td>
-                          <td className="py-2 px-3 text-right font-bold text-slate-900 font-mono">
-                            {formatVND(entry.quantity * entry.rate)} đ
-                          </td>
-                          <td className="py-2 px-3 text-center">
-                            <div className="flex items-center justify-center gap-1">
-                              <button
-                                onClick={() => handleOpenSingleModal(entry)}
-                                className="p-1 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded"
-                              >
-                                <Edit className="w-3.5 h-3.5" />
-                              </button>
-                              <button
-                                onClick={() => deleteTimesheetEntry(entry.id)}
-                                className="p-1 text-rose-600 hover:bg-rose-50 rounded"
-                              >
-                                <Trash2 className="w-3.5 h-3.5" />
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
 
       {/* QUICK BULK WORKLOAD MODAL (5 BILLABLE ITEMS ONLY) */}
       {bulkStaff && (
@@ -1215,137 +1022,6 @@ export const TimesheetManager: React.FC = () => {
           initialTemplateId={evaluatingTarget.templateId}
           onClose={() => setEvaluatingTarget(null)}
         />
-      )}
-
-      {/* SINGLE ENTRY MODAL */}
-      {showSingleModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
-          <div className="bg-white rounded-2xl border border-slate-200 max-w-md w-full p-6 shadow-2xl space-y-4">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-              <h3 className="font-bold text-base text-slate-900">
-                {editingEntry ? 'Sửa Bản Ghi Ca Lẻ' : 'Thêm Bản Ghi Ca Lẻ'}
-              </h3>
-              <button
-                onClick={() => setShowSingleModal(false)}
-                className="text-slate-400 hover:text-slate-600 p-1.5 rounded-lg hover:bg-slate-100"
-              >
-                ✕
-              </button>
-            </div>
-
-            <form onSubmit={handleSaveSingleEntry} className="space-y-3">
-              <div>
-                <label className="block text-slate-700 font-bold mb-1 text-xs">Nhân sự:</label>
-                <select
-                  value={singleForm.staffId}
-                  onChange={e => {
-                    const sId = e.target.value;
-                    const st = staffList.find(s => s.id === sId);
-                    const rates = st ? getStaffDutyRates(st) : { teachingRate: 70000 };
-                    setSingleForm({ ...singleForm, staffId: sId, rate: rates.teachingRate });
-                  }}
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold"
-                >
-                  {staffList.filter(s => s.isActive).map(s => (
-                    <option key={s.id} value={s.id}>
-                      {s.fullName} ({s.code} - {s.role})
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <label className="block text-slate-700 font-bold mb-1 text-xs">Ngày thực hiện:</label>
-                  <input
-                    type="date"
-                    value={singleForm.date}
-                    onChange={e => setSingleForm({ ...singleForm, date: e.target.value })}
-                    className="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-mono"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-slate-700 font-bold mb-1 text-xs">Hạng mục:</label>
-                  <select
-                    value={singleForm.type}
-                    onChange={e => {
-                      const t = e.target.value as TimesheetEntry['type'];
-                      const st = staffList.find(s => s.id === singleForm.staffId);
-                      const rates = st ? getStaffDutyRates(st) : { teachingRate: 70000, tutoringRate: 70000, gradingRate: 10000, dayWorkRate: 70000 };
-                      let unit = 'Buổi';
-                      let rate = rates.teachingRate;
-                      if (t === 'tutoring_session') { unit = 'Buổi'; rate = rates.tutoringRate; }
-                      if (t === 'grading') { unit = 'Bài'; rate = rates.gradingRate; }
-                      if (t === 'day_work') { unit = 'Ngày'; rate = rates.dayWorkRate; }
-                      if (t === 'bonus') { unit = 'Lần'; rate = 100000; }
-                      setSingleForm({ ...singleForm, type: t, unit, rate });
-                    }}
-                    className="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold"
-                  >
-                    <option value="teaching_session">1. Buổi dạy học</option>
-                    <option value="tutoring_session">2. Buổi trợ giảng</option>
-                    <option value="grading">3. Số bài chấm</option>
-                    <option value="day_work">4. Ngày công (Trợ lý)</option>
-                    <option value="bonus">5. Thưởng</option>
-                  </select>
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-slate-700 font-bold mb-1 text-xs">Mô tả công việc:</label>
-                <input
-                  type="text"
-                  value={singleForm.label}
-                  onChange={e => setSingleForm({ ...singleForm, label: e.target.value })}
-                  placeholder="VD: Dạy chuyên đề Di truyền học quần thể"
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <label className="block text-slate-700 font-bold mb-1 text-xs">Số lượng:</label>
-                  <input
-                    type="number"
-                    step="1"
-                    min="1"
-                    value={singleForm.quantity}
-                    onChange={e => setSingleForm({ ...singleForm, quantity: Number(e.target.value) })}
-                    className="w-full px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-mono font-bold"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-slate-700 font-bold mb-1 text-xs">Đơn giá (VNĐ):</label>
-                  <input
-                    type="number"
-                    step="5000"
-                    value={singleForm.rate}
-                    onChange={e => setSingleForm({ ...singleForm, rate: Number(e.target.value) })}
-                    className="w-full px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-mono font-bold"
-                  />
-                </div>
-              </div>
-
-              <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-slate-100">
-                <button
-                  type="button"
-                  onClick={() => setShowSingleModal(false)}
-                  className="px-3.5 py-1.5 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-lg cursor-pointer"
-                >
-                  Hủy Bỏ
-                </button>
-                <button
-                  type="submit"
-                  className="px-4 py-1.5 text-xs font-bold text-white bg-slate-900 hover:bg-slate-800 rounded-lg shadow-xs cursor-pointer"
-                >
-                  {editingEntry ? 'Lưu Thay Đổi' : 'Thêm Bản Ghi'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
       )}
 
     </div>

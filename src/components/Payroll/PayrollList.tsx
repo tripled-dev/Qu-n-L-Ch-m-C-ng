@@ -173,18 +173,18 @@ export const PayrollList: React.FC = () => {
       </div>
 
       {/* Control Bar & Filter */}
-      <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-xs flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4">
+      <div className="bg-white rounded-xl border border-slate-200 p-3.5 shadow-xs flex flex-col xl:flex-row items-stretch xl:items-center justify-between gap-3">
         
         {/* Left Filter Group */}
         <div className="flex flex-wrap items-center gap-2">
           
           {/* Department Filter */}
-          <div className="flex items-center gap-1 bg-slate-50 border border-slate-200 rounded-lg p-1">
-            <Filter className="w-3.5 h-3.5 text-slate-500 ml-1.5" />
+          <div className="flex items-center gap-1 bg-slate-50 border border-slate-200 rounded-lg px-2 py-1 shrink-0">
+            <Filter className="w-3.5 h-3.5 text-slate-500 shrink-0" />
             <select
               value={departmentFilter}
               onChange={e => setDepartmentFilter(e.target.value)}
-              className="text-xs font-semibold bg-transparent text-slate-800 pr-2 py-1 focus:outline-none cursor-pointer"
+              className="text-xs font-semibold bg-transparent text-slate-800 pr-1 py-0.5 focus:outline-none cursor-pointer whitespace-nowrap"
             >
               <option value="all">Tất cả bộ phận</option>
               <option value="day_hoc">Bộ phận Dạy Học</option>
@@ -196,11 +196,11 @@ export const PayrollList: React.FC = () => {
           </div>
 
           {/* Status Filter */}
-          <div className="flex items-center gap-1 bg-slate-50 border border-slate-200 rounded-lg p-1">
+          <div className="flex items-center gap-1 bg-slate-50 border border-slate-200 rounded-lg px-2 py-1 shrink-0">
             <select
               value={statusFilter}
               onChange={e => setStatusFilter(e.target.value)}
-              className="text-xs font-semibold bg-transparent text-slate-800 px-2 py-1 focus:outline-none cursor-pointer"
+              className="text-xs font-semibold bg-transparent text-slate-800 py-0.5 focus:outline-none cursor-pointer whitespace-nowrap"
             >
               <option value="all">Tất cả trạng thái</option>
               <option value="draft">Bản nháp</option>
@@ -210,10 +210,10 @@ export const PayrollList: React.FC = () => {
           </div>
 
           {/* View Mode Toggle */}
-          <div className="flex items-center bg-slate-100 p-1 rounded-lg border border-slate-200">
+          <div className="flex items-center bg-slate-100 p-1 rounded-lg border border-slate-200 shrink-0">
             <button
               onClick={() => setViewMode('five_items')}
-              className={`px-2.5 py-1 text-xs font-bold rounded-md transition-all cursor-pointer ${
+              className={`px-2.5 py-1 text-xs font-bold rounded-md transition-all cursor-pointer whitespace-nowrap ${
                 viewMode === 'five_items'
                   ? 'bg-white text-slate-900 shadow-xs border border-slate-200'
                   : 'text-slate-600 hover:text-slate-900'
@@ -223,7 +223,7 @@ export const PayrollList: React.FC = () => {
             </button>
             <button
               onClick={() => setViewMode('summary')}
-              className={`px-2.5 py-1 text-xs font-bold rounded-md transition-all cursor-pointer ${
+              className={`px-2.5 py-1 text-xs font-bold rounded-md transition-all cursor-pointer whitespace-nowrap ${
                 viewMode === 'summary'
                   ? 'bg-white text-slate-900 shadow-xs border border-slate-200'
                   : 'text-slate-600 hover:text-slate-900'
@@ -236,17 +236,17 @@ export const PayrollList: React.FC = () => {
         </div>
 
         {/* Right Action Buttons */}
-        <div className="flex items-center gap-2 flex-wrap relative">
+        <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap justify-end shrink-0 relative">
           
           {/* Real-time Auto-Sync Status Badge */}
-          <span className="hidden sm:inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-700 bg-emerald-50 px-2.5 py-1.5 rounded-lg border border-emerald-200">
+          <span className="hidden lg:inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-700 bg-emerald-50 px-2.5 py-1.5 rounded-lg border border-emerald-200 whitespace-nowrap shrink-0">
             <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
             <span>Tự động đồng bộ</span>
           </span>
 
           {/* Toast feedback */}
           {syncedToast && (
-            <div className="absolute -top-10 right-0 bg-emerald-800 text-emerald-100 text-xs font-bold px-3 py-1.5 rounded-lg shadow-lg flex items-center gap-1.5 animate-bounce z-20">
+            <div className="absolute -top-10 right-0 bg-emerald-800 text-emerald-100 text-xs font-bold px-3 py-1.5 rounded-lg shadow-lg flex items-center gap-1.5 animate-bounce z-20 whitespace-nowrap">
               <CheckCircle className="w-4 h-4 text-emerald-300" />
               <span>Đã đồng bộ thành công dữ liệu Chấm công sang Phiếu lương!</span>
             </div>
@@ -255,30 +255,30 @@ export const PayrollList: React.FC = () => {
           {/* Manual Sync Button */}
           <button
             onClick={handleSyncFromTimesheets}
-            className="flex items-center gap-1.5 px-3 py-2 text-xs font-bold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-lg transition-colors cursor-pointer shadow-xs"
+            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-lg transition-colors cursor-pointer shadow-xs whitespace-nowrap shrink-0"
             title="Bấm để đồng bộ lại toàn bộ phiếu lương tháng theo dữ liệu chấm công mới nhất"
           >
-            <Sparkles className="w-3.5 h-3.5 text-emerald-600" />
+            <Sparkles className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
             <span>Đồng Bộ Thủ Công</span>
           </button>
 
           {/* Export CSV / Excel */}
           <button
             onClick={handleExportCSV}
-            className="flex items-center gap-1.5 px-3 py-2 text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors cursor-pointer"
+            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors cursor-pointer whitespace-nowrap shrink-0"
             title="Xuất bảng lương tổng hợp ra file CSV / Excel"
           >
-            <Download className="w-3.5 h-3.5" />
+            <Download className="w-3.5 h-3.5 shrink-0" />
             <span>Xuất Excel/CSV</span>
           </button>
 
           {/* Print All */}
           <button
             onClick={() => window.print()}
-            className="flex items-center gap-1.5 px-3 py-2 text-xs font-bold text-white bg-slate-900 hover:bg-slate-800 rounded-lg shadow-xs transition-colors cursor-pointer"
+            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-white bg-slate-900 hover:bg-slate-800 rounded-lg shadow-xs transition-colors cursor-pointer whitespace-nowrap shrink-0"
             title="In bảng tổng hợp hoặc phiếu lương"
           >
-            <Printer className="w-3.5 h-3.5" />
+            <Printer className="w-3.5 h-3.5 shrink-0" />
             <span>In Bảng Lương</span>
           </button>
 
@@ -326,16 +326,16 @@ export const PayrollList: React.FC = () => {
             <table className="w-full text-left border-collapse text-xs">
               <thead>
                 <tr className="bg-slate-100/90 text-slate-700 font-bold border-b border-slate-200">
-                  <th className="py-3 px-3 min-w-[160px]">Nhân sự</th>
-                  <th className="py-3 px-2 text-right min-w-[120px]">1. Dạy Học</th>
-                  <th className="py-3 px-2 text-right min-w-[130px]">2. Trợ Giảng</th>
-                  <th className="py-3 px-2 text-right min-w-[120px]">3. Chấm Thi</th>
-                  <th className="py-3 px-2 text-right min-w-[120px]">4. Ngày Công</th>
-                  <th className="py-3 px-2 text-right min-w-[110px]">5. Thưởng/Trừ</th>
-                  <th className="py-3 px-2 text-center min-w-[65px]">KPI</th>
-                  <th className="py-3 px-3 text-right min-w-[110px]">Thực Nhận</th>
-                  <th className="py-3 px-2 text-center min-w-[100px]">Trạng Thái</th>
-                  <th className="py-3 px-3 text-center min-w-[80px]">Thao Tác</th>
+                  <th className="py-3 px-3.5 whitespace-nowrap min-w-[180px]">Nhân sự</th>
+                  <th className="py-3 px-2 text-right whitespace-nowrap min-w-[120px]">1. Dạy Học</th>
+                  <th className="py-3 px-2 text-right whitespace-nowrap min-w-[130px]">2. Trợ Giảng</th>
+                  <th className="py-3 px-2 text-right whitespace-nowrap min-w-[120px]">3. Chấm Thi</th>
+                  <th className="py-3 px-2 text-right whitespace-nowrap min-w-[120px]">4. Ngày Công</th>
+                  <th className="py-3 px-2 text-right whitespace-nowrap min-w-[110px]">5. Thưởng/Trừ</th>
+                  <th className="py-3 px-2 text-center whitespace-nowrap min-w-[70px]">KPI</th>
+                  <th className="py-3 px-3 text-right whitespace-nowrap min-w-[120px]">Thực Nhận</th>
+                  <th className="py-3 px-2 text-center whitespace-nowrap min-w-[110px]">Trạng Thái</th>
+                  <th className="py-3 px-3 text-center whitespace-nowrap min-w-[80px]">Thao Tác</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -354,24 +354,24 @@ export const PayrollList: React.FC = () => {
                   return (
                     <tr key={slip.id} className="hover:bg-slate-50 transition-colors">
                       {/* Staff Name & Roles */}
-                      <td className="py-3 px-3">
-                        <div className="font-bold text-slate-900 leading-snug">{slip.staffName}</div>
-                        <div className="flex items-center gap-1 mt-1 flex-wrap">
-                          <span className="font-mono text-[10px] bg-slate-100 text-slate-600 px-1 py-0.2 rounded border border-slate-200">
+                      <td className="py-3 px-3.5 whitespace-nowrap">
+                        <div className="font-bold text-slate-900 whitespace-nowrap text-xs sm:text-sm">{slip.staffName}</div>
+                        <div className="flex items-center gap-1 mt-1 flex-nowrap">
+                          <span className="font-mono text-[10px] bg-slate-100 text-slate-600 px-1 py-0.2 rounded border border-slate-200 whitespace-nowrap shrink-0">
                             {slip.staffCode || '---'}
                           </span>
-                          <span className={`text-[9px] font-bold px-1.5 py-0.2 rounded border ${roleMeta.badgeBg} ${roleMeta.badgeText} ${roleMeta.badgeBorder}`}>
+                          <span className={`text-[9px] font-bold px-1.5 py-0.2 rounded border whitespace-nowrap shrink-0 ${roleMeta.badgeBg} ${roleMeta.badgeText} ${roleMeta.badgeBorder}`}>
                             {roleMeta.shortTitle}
                           </span>
                         </div>
                       </td>
 
                       {/* 1. Dạy học */}
-                      <td className="py-3 px-2 text-right">
+                      <td className="py-3 px-2 text-right whitespace-nowrap">
                         {tch && tch.sessions > 0 ? (
                           <div>
-                            <div className="font-bold text-slate-900">{formatVND(tch.amount)} đ</div>
-                            <div className="text-[10px] text-slate-500">
+                            <div className="font-bold text-slate-900 whitespace-nowrap">{formatVND(tch.amount)} đ</div>
+                            <div className="text-[10px] text-slate-500 whitespace-nowrap">
                               {tch.sessions} buổi × {formatVND(tch.rate)} đ
                             </div>
                           </div>
@@ -381,11 +381,11 @@ export const PayrollList: React.FC = () => {
                       </td>
 
                       {/* 2. Trợ giảng */}
-                      <td className="py-3 px-2 text-right">
+                      <td className="py-3 px-2 text-right whitespace-nowrap">
                         {tut && tut.sessions > 0 ? (
                           <div>
-                            <div className="font-bold text-sky-900">{formatVND(tut.amount)} đ</div>
-                            <div className="text-[10px] text-slate-500">
+                            <div className="font-bold text-sky-900 whitespace-nowrap">{formatVND(tut.amount)} đ</div>
+                            <div className="text-[10px] text-slate-500 whitespace-nowrap">
                               {tut.sessions} buổi × {formatVND(tut.rate)} đ
                             </div>
                           </div>
@@ -395,11 +395,11 @@ export const PayrollList: React.FC = () => {
                       </td>
 
                       {/* 3. Chấm thi */}
-                      <td className="py-3 px-2 text-right">
+                      <td className="py-3 px-2 text-right whitespace-nowrap">
                         {grd && grd.items > 0 ? (
                           <div>
-                            <div className="font-bold text-emerald-900">{formatVND(grd.amount)} đ</div>
-                            <div className="text-[10px] text-slate-500">
+                            <div className="font-bold text-emerald-900 whitespace-nowrap">{formatVND(grd.amount)} đ</div>
+                            <div className="text-[10px] text-slate-500 whitespace-nowrap">
                               {grd.items} bài × {formatVND(grd.rate)} đ
                             </div>
                           </div>
@@ -409,11 +409,11 @@ export const PayrollList: React.FC = () => {
                       </td>
 
                       {/* 4. Ngày công */}
-                      <td className="py-3 px-2 text-right">
+                      <td className="py-3 px-2 text-right whitespace-nowrap">
                         {day && day.days > 0 ? (
                           <div>
-                            <div className="font-bold text-amber-900">{formatVND(day.amount)} đ</div>
-                            <div className="text-[10px] text-slate-500">
+                            <div className="font-bold text-amber-900 whitespace-nowrap">{formatVND(day.amount)} đ</div>
+                            <div className="text-[10px] text-slate-500 whitespace-nowrap">
                               {day.days} ngày × {formatVND(day.rate)} đ
                             </div>
                           </div>
@@ -423,13 +423,13 @@ export const PayrollList: React.FC = () => {
                       </td>
 
                       {/* 5. Thưởng / Trừ */}
-                      <td className="py-3 px-2 text-right">
+                      <td className="py-3 px-2 text-right whitespace-nowrap">
                         {bon !== 0 ? (
                           <div>
-                            <div className={`font-bold ${bon > 0 ? 'text-emerald-700' : 'text-red-600'}`}>
+                            <div className={`font-bold whitespace-nowrap ${bon > 0 ? 'text-emerald-700' : 'text-red-600'}`}>
                               {bon > 0 ? `+${formatVND(bon)}` : formatVND(bon)} đ
                             </div>
-                            <div className="text-[10px] text-slate-500">
+                            <div className="text-[10px] text-slate-500 whitespace-nowrap">
                               {slip.generalBonus > 0 ? 'Thưởng ' : ''}{slip.deductions > 0 ? `Trừ ${formatVND(slip.deductions)}` : ''}
                             </div>
                           </div>
@@ -439,12 +439,12 @@ export const PayrollList: React.FC = () => {
                       </td>
 
                       {/* KPI */}
-                      <td className="py-3 px-2 text-center">
+                      <td className="py-3 px-2 text-center whitespace-nowrap">
                         <button
                           onClick={() => {
                             if (matchingStaff) setEvalStaff(matchingStaff);
                           }}
-                          className={`inline-flex items-center gap-0.5 font-bold text-[11px] px-1.5 py-0.5 rounded cursor-pointer hover:ring-2 hover:ring-slate-400 ${
+                          className={`inline-flex items-center gap-0.5 font-bold text-[11px] px-1.5 py-0.5 rounded cursor-pointer hover:ring-2 hover:ring-slate-400 whitespace-nowrap ${
                             slip.primarySalary.kpiPercent >= 95
                               ? 'bg-emerald-100 text-emerald-800'
                               : slip.primarySalary.kpiPercent >= 80
@@ -458,18 +458,18 @@ export const PayrollList: React.FC = () => {
                       </td>
 
                       {/* Thực nhận */}
-                      <td className="py-3 px-3 text-right">
+                      <td className="py-3 px-3 text-right whitespace-nowrap">
                         <div className="font-extrabold text-slate-900 text-sm whitespace-nowrap">
                           {formatVND(slip.totalSalary)} đ
                         </div>
                       </td>
 
                       {/* Status */}
-                      <td className="py-3 px-2 text-center">
+                      <td className="py-3 px-2 text-center whitespace-nowrap">
                         <select
                           value={slip.status}
                           onChange={e => updateSlipStatus(slip.id, e.target.value as any)}
-                          className={`text-[10px] font-bold py-0.5 px-2 rounded-full border cursor-pointer ${
+                          className={`text-[10px] font-bold py-0.5 px-2 rounded-full border cursor-pointer whitespace-nowrap ${
                             slip.status === 'paid'
                               ? 'bg-emerald-50 text-emerald-700 border-emerald-300'
                               : slip.status === 'approved'
@@ -484,11 +484,11 @@ export const PayrollList: React.FC = () => {
                       </td>
 
                       {/* Action buttons */}
-                      <td className="py-3 px-3 text-center">
+                      <td className="py-3 px-3 text-center whitespace-nowrap">
                         <div className="flex items-center justify-center gap-1">
                           <button
                             onClick={() => setActiveSlip(slip)}
-                            className="p-1 text-slate-700 hover:text-slate-900 hover:bg-slate-100 rounded transition-colors"
+                            className="p-1 text-slate-700 hover:text-slate-900 hover:bg-slate-100 rounded transition-colors cursor-pointer"
                             title="Xem & Xuất phiếu lương chuẩn Triple D"
                           >
                             <FileText className="w-3.5 h-3.5" />
@@ -497,7 +497,7 @@ export const PayrollList: React.FC = () => {
                             onClick={() => {
                               if (matchingStaff) setEvalStaff(matchingStaff);
                             }}
-                            className="p-1 text-slate-700 hover:text-slate-900 hover:bg-slate-100 rounded transition-colors"
+                            className="p-1 text-slate-700 hover:text-slate-900 hover:bg-slate-100 rounded transition-colors cursor-pointer"
                             title="Đánh giá theo Bảng Kiểm Trọng Số"
                           >
                             <CheckSquare className="w-3.5 h-3.5 text-indigo-600" />
@@ -516,7 +516,7 @@ export const PayrollList: React.FC = () => {
                                 },
                               });
                             }}
-                            className="p-1 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
+                            className="p-1 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors cursor-pointer"
                             title="Xóa phiếu lương này"
                           >
                             <Trash2 className="w-3.5 h-3.5" />

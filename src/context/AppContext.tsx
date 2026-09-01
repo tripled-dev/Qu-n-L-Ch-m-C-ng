@@ -18,7 +18,11 @@ import {
 } from '../data/initialData';
 import { getStaffDutyRates, resolveStaffRoleType, hasStaffRole } from '../data/roleDefinitions';
 import { calculateKpiFromScores, getDefaultSalaryMonth } from '../utils/formatters';
-import { fetchFromGoogleSheet, pushToGoogleSheet } from '../utils/googleSheetsSync';
+import {
+  fetchFromGoogleSheet,
+  pushToGoogleSheet,
+  FIXED_GOOGLE_APPS_SCRIPT_URL,
+} from '../utils/googleSheetsSync';
 import { ConfirmDialog } from '../components/Common/ConfirmDialog';
 import { ToastNotification } from '../components/Common/ToastNotification';
 
@@ -247,9 +251,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return saved ? JSON.parse(saved) : INITIAL_ORG_SETTINGS;
   });
 
-  const [googleSheetUrl, setGoogleSheetUrlState] = useState<string>(() => {
-    return localStorage.getItem(`${LOCAL_STORAGE_KEY_PREFIX}gsheet_url`) || '';
-  });
+  const [googleSheetUrl, setGoogleSheetUrlState] = useState<string>(FIXED_GOOGLE_APPS_SCRIPT_URL);
 
   const [isSyncingGoogleSheet, setIsSyncingGoogleSheet] = useState<boolean>(false);
   const [lastSyncTime, setLastSyncTime] = useState<string | null>(() => {
@@ -260,9 +262,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     text: '',
   });
 
+  const isInitialSyncDoneRef = useRef<boolean>(false);
+  const autoPushTimerRef = useRef<NodeJS.Timeout | null>(null);
+
   const setGoogleSheetUrl = (url: string) => {
-    setGoogleSheetUrlState(url);
-    localStorage.setItem(`${LOCAL_STORAGE_KEY_PREFIX}gsheet_url`, url);
+    const targetUrl = url.trim() || FIXED_GOOGLE_APPS_SCRIPT_URL;
+    setGoogleSheetUrlState(targetUrl);
+    localStorage.setItem(`${LOCAL_STORAGE_KEY_PREFIX}gsheet_url`, targetUrl);
   };
 
   // State refs to guarantee fresh data inside synchronous/asynchronous calculation closures
@@ -352,13 +358,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         t => t.staffId === staff.id && t.month === month
       );
 
-      // Helper to group timesheet items by label & rate for exact ca lẻ transparency
+      // Helper to group timesheet items by label & rate for exact workload transparency
       const groupLogsByTier = (logs: TimesheetEntry[], defaultUnit: string, fallbackRate: number, specificKpi: number) => {
         const map = new Map<string, { label: string; unit: string; rate: number; quantity: number; amount: number }>();
         logs.forEach(e => {
           const rate = e.rate > 0 ? e.rate : fallbackRate;
           const unit = e.unit || defaultUnit;
-          const label = e.label || 'Ca lẻ';
+          const label = e.label || 'Khối lượng thực hiện';
           const key = `${label}__${rate}`;
           if (!map.has(key)) {
             map.set(key, { label, unit, rate, quantity: 0, amount: 0 });
@@ -617,7 +623,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           : {
               note1: '(1): Đánh giá dựa trên “Bảng Kiểm” tương ứng.',
               note2: '(2): Lương nhận thực tế là “Khối lượng (Ngày/Buổi/Bài) × Đơn Giá × KPI”',
-              note3: '(3): Đơn giá tính theo 5 hạng mục chuẩn: Buổi dạy, Buổi trợ giảng, Số bài chấm, Ngày công trợ lý, Thưởng',
+              note3: '(3): Đơn giá tính theo thỏa thuận ban đầu',
             },
         signatures: {
           managerTitle: existingSlip?.signatures?.managerTitle || curOrgSettings.managerTitle,
@@ -683,6 +689,95 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   useEffect(() => {
     localStorage.setItem(`${LOCAL_STORAGE_KEY_PREFIX}org_settings`, JSON.stringify(orgSettings));
   }, [orgSettings]);
+
+  // 1. Auto-fetch data from Google Sheet on initial mount
+  useEffect(() => {
+    let isMounted = true;
+    const initialSync = async () => {
+      try {
+        const result = await fetchFromGoogleSheet(FIXED_GOOGLE_APPS_SCRIPT_URL);
+        if (isMounted && result.success && result.data) {
+          if (result.data.staffList && Array.isArray(result.data.staffList) && result.data.staffList.length > 0) {
+            setStaffList(result.data.staffList);
+            staffListRef.current = result.data.staffList;
+          }
+          if (result.data.timesheetEntries && Array.isArray(result.data.timesheetEntries) && result.data.timesheetEntries.length > 0) {
+            setTimesheetEntries(result.data.timesheetEntries);
+            timesheetEntriesRef.current = result.data.timesheetEntries;
+          }
+          if (result.data.evaluations && Array.isArray(result.data.evaluations) && result.data.evaluations.length > 0) {
+            setEvaluations(result.data.evaluations);
+            evaluationsRef.current = result.data.evaluations;
+          }
+          if (result.data.orgSettings && typeof result.data.orgSettings === 'object') {
+            setOrgSettings(result.data.orgSettings);
+            orgSettingsRef.current = result.data.orgSettings;
+          }
+          if (result.data.checklistTemplates && Array.isArray(result.data.checklistTemplates) && result.data.checklistTemplates.length > 0) {
+            setChecklistTemplates(result.data.checklistTemplates);
+            checklistTemplatesRef.current = result.data.checklistTemplates;
+          }
+          const now = new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+          setLastSyncTime(now);
+          localStorage.setItem(`${LOCAL_STORAGE_KEY_PREFIX}last_sync_time`, now);
+          setSyncStatusMessage({ type: 'success', text: `Tự động đồng bộ từ Google Sheet lúc ${now}` });
+        }
+      } catch (e) {
+        console.warn('Initial Google Sheet fetch skipped or failed:', e);
+      } finally {
+        isInitialSyncDoneRef.current = true;
+      }
+    };
+
+    initialSync();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  // 2. Auto-push all modifications directly to the fixed Google Apps Script (debounced 1.5s)
+  useEffect(() => {
+    if (!isInitialSyncDoneRef.current) return;
+
+    if (autoPushTimerRef.current) {
+      clearTimeout(autoPushTimerRef.current);
+    }
+
+    autoPushTimerRef.current = setTimeout(async () => {
+      try {
+        const payload = {
+          staffList: staffListRef.current,
+          timesheetEntries: timesheetEntriesRef.current,
+          evaluations: evaluationsRef.current,
+          payrollSlips: payrollSlipsRef.current,
+          orgSettings: orgSettingsRef.current,
+          checklistTemplates: checklistTemplatesRef.current,
+          lastUpdated: new Date().toISOString(),
+        };
+
+        setSyncStatusMessage({ type: 'syncing', text: 'Đang tự động lưu lên Google Sheet...' });
+        const result = await pushToGoogleSheet(FIXED_GOOGLE_APPS_SCRIPT_URL, payload);
+        if (result.success) {
+          const now = new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+          setLastSyncTime(now);
+          localStorage.setItem(`${LOCAL_STORAGE_KEY_PREFIX}last_sync_time`, now);
+          setSyncStatusMessage({ type: 'success', text: `Tự động ghi nhận lên Google Sheet lúc ${now}` });
+        } else {
+          setSyncStatusMessage({ type: 'error', text: result.message || 'Lỗi tự động lưu lên Google Sheet' });
+        }
+      } catch (err: any) {
+        console.error('Auto sync to Google Sheet error:', err);
+        setSyncStatusMessage({ type: 'error', text: 'Không thể kết nối Google Sheet' });
+      }
+    }, 1500);
+
+    return () => {
+      if (autoPushTimerRef.current) {
+        clearTimeout(autoPushTimerRef.current);
+      }
+    };
+  }, [staffList, timesheetEntries, evaluations, payrollSlips, orgSettings, checklistTemplates]);
 
   // Staff CRUD
   const addStaff = (staffData: Omit<Staff, 'id'>) => {
