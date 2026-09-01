@@ -224,14 +224,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // Load from local storage or fallback to initial data
   const [staffList, setStaffList] = useState<Staff[]>(() => {
+    const savedUrl = localStorage.getItem(`${LOCAL_STORAGE_KEY_PREFIX}gsheet_url`);
     const saved = localStorage.getItem(`${LOCAL_STORAGE_KEY_PREFIX}staff`);
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        if (Array.isArray(parsed)) return parsed;
       } catch (e) {}
     }
-    return INITIAL_STAFF;
+    // If a Google Sheet URL is configured, do not seed initial sample staff while waiting for fetch
+    return savedUrl && savedUrl.trim() ? [] : INITIAL_STAFF;
   });
 
   const [payrollSlips, setPayrollSlips] = useState<MonthlyPayrollSlip[]>(() => {
@@ -274,6 +276,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const isInitialSyncDoneRef = useRef<boolean>(false);
   const autoPushTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const hasUserEditedRef = useRef<boolean>(false);
+
+  const markUserEdit = () => {
+    hasUserEditedRef.current = true;
+  };
 
   const setGoogleSheetUrl = (url: string) => {
     const targetUrl = url.trim();
@@ -707,20 +714,23 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const url = (localStorage.getItem(`${LOCAL_STORAGE_KEY_PREFIX}gsheet_url`) || googleSheetUrl).trim();
       if (!url || !url.startsWith('http')) {
         isInitialSyncDoneRef.current = true;
+        hasUserEditedRef.current = false;
         return;
       }
       try {
+        setSyncStatusMessage({ type: 'syncing', text: 'Đang tự động tải dữ liệu mới nhất từ Google Sheet...' });
         const result = await fetchFromGoogleSheet(url);
         if (isMounted && result.success && result.data) {
-          if (result.data.staffList && Array.isArray(result.data.staffList) && result.data.staffList.length > 0) {
+          hasUserEditedRef.current = false;
+          if (result.data.staffList && Array.isArray(result.data.staffList)) {
             setStaffList(result.data.staffList);
             staffListRef.current = result.data.staffList;
           }
-          if (result.data.timesheetEntries && Array.isArray(result.data.timesheetEntries) && result.data.timesheetEntries.length > 0) {
+          if (result.data.timesheetEntries && Array.isArray(result.data.timesheetEntries)) {
             setTimesheetEntries(result.data.timesheetEntries);
             timesheetEntriesRef.current = result.data.timesheetEntries;
           }
-          if (result.data.evaluations && Array.isArray(result.data.evaluations) && result.data.evaluations.length > 0) {
+          if (result.data.evaluations && Array.isArray(result.data.evaluations)) {
             setEvaluations(result.data.evaluations);
             evaluationsRef.current = result.data.evaluations;
           }
@@ -736,11 +746,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           setLastSyncTime(now);
           localStorage.setItem(`${LOCAL_STORAGE_KEY_PREFIX}last_sync_time`, now);
           setSyncStatusMessage({ type: 'success', text: `Tự động đồng bộ từ Google Sheet lúc ${now}` });
+        } else if (isMounted) {
+          setSyncStatusMessage({ type: 'error', text: result.message || 'Không thể tải dữ liệu từ Google Sheet' });
         }
       } catch (e) {
         console.warn('Initial Google Sheet fetch skipped or failed:', e);
+        if (isMounted) {
+          setSyncStatusMessage({ type: 'error', text: 'Chưa kết nối được với Google Sheet' });
+        }
       } finally {
         isInitialSyncDoneRef.current = true;
+        hasUserEditedRef.current = false; // Never push on page reload
       }
     };
 
@@ -751,9 +767,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
   }, []);
 
-  // 2. Auto-push all modifications directly to Google Apps Script if URL is configured (debounced 1.5s)
+  // 2. Auto-push all modifications directly to Google Apps Script ONLY IF user edited data during this session
   useEffect(() => {
     if (!isInitialSyncDoneRef.current) return;
+    if (!hasUserEditedRef.current) return; // DO NOT PUSH ON RELOAD
+
     const url = (localStorage.getItem(`${LOCAL_STORAGE_KEY_PREFIX}gsheet_url`) || googleSheetUrl).trim();
     if (!url || !url.startsWith('http')) return;
 
@@ -762,6 +780,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
 
     autoPushTimerRef.current = setTimeout(async () => {
+      if (!hasUserEditedRef.current) return;
       try {
         const payload = {
           staffList: staffListRef.current,
@@ -780,6 +799,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           setLastSyncTime(now);
           localStorage.setItem(`${LOCAL_STORAGE_KEY_PREFIX}last_sync_time`, now);
           setSyncStatusMessage({ type: 'success', text: `Tự động ghi nhận lên Google Sheet lúc ${now}` });
+          hasUserEditedRef.current = false;
         } else {
           setSyncStatusMessage({ type: 'error', text: result.message || 'Lỗi tự động lưu lên Google Sheet' });
         }
@@ -798,6 +818,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // Staff CRUD
   const addStaff = (staffData: Omit<Staff, 'id'>) => {
+    markUserEdit();
     const newStaff: Staff = {
       ...staffData,
       id: `staff_${Date.now()}`,
@@ -809,6 +830,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const updateStaff = (updatedStaff: Staff) => {
+    markUserEdit();
     const nextList = staffListRef.current.map(s => (s.id === updatedStaff.id ? updatedStaff : s));
     staffListRef.current = nextList;
     setStaffList(nextList);
@@ -834,6 +856,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const deleteStaff = (id: string) => {
+    markUserEdit();
     const nextList = staffListRef.current.filter(s => s.id !== id);
     staffListRef.current = nextList;
     setStaffList(nextList);
@@ -854,6 +877,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // Timesheet
   const addTimesheetEntry = (entryData: Omit<TimesheetEntry, 'id'>) => {
+    markUserEdit();
     const newEntry: TimesheetEntry = {
       ...entryData,
       id: `ts_${Date.now()}`,
@@ -865,6 +889,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const updateTimesheetEntry = (entry: TimesheetEntry) => {
+    markUserEdit();
     const nextTs = timesheetEntriesRef.current.map(e => (e.id === entry.id ? entry : e));
     timesheetEntriesRef.current = nextTs;
     setTimesheetEntries(nextTs);
@@ -872,6 +897,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const deleteTimesheetEntry = (id: string) => {
+    markUserEdit();
     const entryToDelete = timesheetEntriesRef.current.find(e => e.id === id);
     const nextTs = timesheetEntriesRef.current.filter(e => e.id !== id);
     timesheetEntriesRef.current = nextTs;
@@ -883,6 +909,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // Evaluation
   const saveEvaluation = (evalData: Omit<KpiEvaluation, 'id'>) => {
+    markUserEdit();
     const curEvals = evaluationsRef.current;
     const existingIndex = curEvals.findIndex(
       e => e.staffId === evalData.staffId && e.month === evalData.month && e.templateId === evalData.templateId
@@ -914,6 +941,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // Payroll Slips
   const savePayrollSlip = (slip: MonthlyPayrollSlip) => {
+    markUserEdit();
     setPayrollSlips(prev => {
       const idx = prev.findIndex(s => s.id === slip.id);
       let updated: MonthlyPayrollSlip[];
@@ -929,6 +957,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const deletePayrollSlip = (id: string) => {
+    markUserEdit();
     setPayrollSlips(prev => {
       const updated = prev.filter(s => s.id !== id);
       payrollSlipsRef.current = updated;
@@ -937,6 +966,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const updateSlipStatus = (id: string, status: 'draft' | 'approved' | 'paid') => {
+    markUserEdit();
     setPayrollSlips(prev => {
       const updated = prev.map(s => (s.id === id ? { ...s, status, updatedAt: new Date().toISOString() } : s));
       payrollSlipsRef.current = updated;
@@ -958,6 +988,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       note?: string;
     }>
   ) => {
+    markUserEdit();
     // Remove existing entries of matching types
     const newTypes = new Set(items.map(i => i.type));
     const filtered = timesheetEntriesRef.current.filter(
@@ -987,10 +1018,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const updateChecklistTemplate = (template: ChecklistTemplate) => {
+    markUserEdit();
     setChecklistTemplates(prev => prev.map(t => (t.id === template.id ? template : t)));
   };
 
   const updateOrgSettings = (settings: OrgSettings) => {
+    markUserEdit();
     setOrgSettings(settings);
   };
 
@@ -1033,6 +1066,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         // Recalculate payroll for current month
         generateMonthlyPayrollForStaff(currentMonth);
 
+        hasUserEditedRef.current = false;
         const now = new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
         setLastSyncTime(now);
         localStorage.setItem(`${LOCAL_STORAGE_KEY_PREFIX}last_sync_time`, now);
@@ -1075,6 +1109,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
       const result = await pushToGoogleSheet(url, payload);
       if (result.success) {
+        hasUserEditedRef.current = false;
         const now = new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
         setLastSyncTime(now);
         localStorage.setItem(`${LOCAL_STORAGE_KEY_PREFIX}last_sync_time`, now);
@@ -1137,6 +1172,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // Clear all sample data to start fresh or receive from Google Sheets
   const clearAllSampleData = () => {
+    hasUserEditedRef.current = false;
     setStaffList([]);
     setTimesheetEntries([]);
     setEvaluations([]);
@@ -1153,6 +1189,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const resetToSampleData = () => {
+    hasUserEditedRef.current = false;
     localStorage.clear();
     setStaffList(INITIAL_STAFF);
     setPayrollSlips(INITIAL_PAYROLL_SLIPS);

@@ -50,10 +50,20 @@ export const GoogleSheetsIntegration: React.FC = () => {
   const [showCodePreview, setShowCodePreview] = useState(false);
   const [showClearSheetModal, setShowClearSheetModal] = useState(false);
 
-  const handleSaveUrl = () => {
+  const handleSaveUrl = async () => {
     const trimmed = inputUrl.trim();
     setGoogleSheetUrl(trimmed);
-    showToast(trimmed ? 'Đã lưu liên kết Google Apps Script Web App!' : 'Đã xóa URL. Chuyển sang dữ liệu mẫu 1 nhân viên.', 'success');
+    if (trimmed) {
+      showToast('Đã lưu liên kết! Đang tải dữ liệu từ Google Sheet...', 'info');
+      const res = await pullDataFromGoogleSheet(trimmed);
+      if (res.success) {
+        showToast('Đồng bộ dữ liệu từ Google Sheet thành công!', 'success');
+      } else {
+        showToast(res.message, 'error');
+      }
+    } else {
+      showToast('Đã xóa URL. Chuyển sang dữ liệu mẫu 1 nhân viên.', 'success');
+    }
   };
 
   const handleClearUrlAndReset = () => {
