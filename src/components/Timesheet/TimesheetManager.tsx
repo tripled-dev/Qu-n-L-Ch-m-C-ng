@@ -38,7 +38,8 @@ export const TimesheetManager: React.FC = () => {
     deleteTimesheetEntry,
     bulkUpdateStaffWorkload,
     generateMonthlyPayrollForStaff,
-    payrollSlips
+    payrollSlips,
+    pushDataToGoogleSheet
   } = useApp();
 
   const [selectedRoleFilter, setSelectedRoleFilter] = useState<string>('all');
@@ -458,10 +459,20 @@ export const TimesheetManager: React.FC = () => {
 
         <div className="flex items-center gap-2">
           <button
-            onClick={() => {
+            onClick={async () => {
               generateMonthlyPayrollForStaff(currentMonth);
-              setSavedFeedback('Đã đồng bộ toàn bộ khối lượng sang phiếu lương tháng!');
-              setTimeout(() => setSavedFeedback(null), 3000);
+              setSavedFeedback('Đang đồng bộ khối lượng sang phiếu lương và Google Sheet...');
+              try {
+                const res = await pushDataToGoogleSheet();
+                if (res.success) {
+                  setSavedFeedback('Đã đồng bộ sang phiếu lương và Google Sheet thành công!');
+                } else {
+                  setSavedFeedback(`Đã đồng bộ phiếu lương. Sheet: ${res.message}`);
+                }
+              } catch (e: any) {
+                setSavedFeedback(`Đã đồng bộ phiếu lương. Lỗi gửi Sheet: ${e.message || e}`);
+              }
+              setTimeout(() => setSavedFeedback(null), 5000);
             }}
             className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-lg text-xs font-bold transition-colors cursor-pointer shadow-xs"
             title="Đồng bộ lại công thức và khối lượng sang phiếu lương"

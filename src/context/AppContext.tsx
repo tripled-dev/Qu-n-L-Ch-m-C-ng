@@ -1133,11 +1133,38 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     autoPushTimerRef.current = setTimeout(async () => {
       if (!hasUserEditedRef.current) return;
       try {
+        const currentSlips = payrollSlipsRef.current || [];
+        const filteredTimesheets = (timesheetEntriesRef.current || []).filter(t => {
+          const tMonth = (t.month || '').trim().substring(0, 7);
+          return currentSlips.some(s => {
+            const sMonth = (s.month || '').trim().substring(0, 7);
+            if (sMonth !== tMonth) return false;
+            return (
+              t.staffId === s.staffId ||
+              (s.staffCode && t.staffId === s.staffCode) ||
+              (s.staffName && t.staffId.trim().toLowerCase() === s.staffName.trim().toLowerCase())
+            );
+          });
+        });
+
+        const filteredEvaluations = (evaluationsRef.current || []).filter(e => {
+          const eMonth = (e.month || '').trim().substring(0, 7);
+          return currentSlips.some(s => {
+            const sMonth = (s.month || '').trim().substring(0, 7);
+            if (sMonth !== eMonth) return false;
+            return (
+              e.staffId === s.staffId ||
+              (s.staffCode && e.staffId === s.staffCode) ||
+              (s.staffName && e.staffId.trim().toLowerCase() === s.staffName.trim().toLowerCase())
+            );
+          });
+        });
+
         const payload = {
           staffList: staffListRef.current,
-          timesheetEntries: timesheetEntriesRef.current,
-          evaluations: evaluationsRef.current,
-          payrollSlips: payrollSlipsRef.current,
+          timesheetEntries: filteredTimesheets,
+          evaluations: filteredEvaluations,
+          payrollSlips: currentSlips,
           orgSettings: orgSettingsRef.current,
           checklistTemplates: checklistTemplatesRef.current,
           lastUpdated: new Date().toISOString(),
@@ -1145,7 +1172,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
         const editedSheets = Array.from(editedSheetsRef.current);
         const targetSheet =
-          editedSheets.length === 1
+          (editedSheets.length === 1 && !editedSheets.includes('PhieuLuong'))
             ? (editedSheets[0] as 'NhanSu' | 'ChamCong' | 'DanhGiaKPI' | 'PhieuLuong' | 'CauHinh')
             : undefined;
         setSyncStatusMessage({ 
@@ -1478,11 +1505,38 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     });
 
     try {
+      const currentSlips = payrollSlipsRef.current || [];
+      const filteredTimesheets = (timesheetEntriesRef.current || []).filter(t => {
+        const tMonth = (t.month || '').trim().substring(0, 7);
+        return currentSlips.some(s => {
+          const sMonth = (s.month || '').trim().substring(0, 7);
+          if (sMonth !== tMonth) return false;
+          return (
+            t.staffId === s.staffId ||
+            (s.staffCode && t.staffId === s.staffCode) ||
+            (s.staffName && t.staffId.trim().toLowerCase() === s.staffName.trim().toLowerCase())
+          );
+        });
+      });
+
+      const filteredEvaluations = (evaluationsRef.current || []).filter(e => {
+        const eMonth = (e.month || '').trim().substring(0, 7);
+        return currentSlips.some(s => {
+          const sMonth = (s.month || '').trim().substring(0, 7);
+          if (sMonth !== eMonth) return false;
+          return (
+            e.staffId === s.staffId ||
+            (s.staffCode && e.staffId === s.staffCode) ||
+            (s.staffName && e.staffId.trim().toLowerCase() === s.staffName.trim().toLowerCase())
+          );
+        });
+      });
+
       const payload = {
         staffList: staffListRef.current,
-        timesheetEntries: timesheetEntriesRef.current,
-        evaluations: evaluationsRef.current,
-        payrollSlips: payrollSlipsRef.current,
+        timesheetEntries: filteredTimesheets,
+        evaluations: filteredEvaluations,
+        payrollSlips: currentSlips,
         orgSettings: orgSettingsRef.current,
         checklistTemplates: checklistTemplatesRef.current,
         lastUpdated: new Date().toISOString(),

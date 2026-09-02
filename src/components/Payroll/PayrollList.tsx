@@ -39,17 +39,33 @@ export const PayrollList: React.FC = () => {
     updateSlipStatus,
     showConfirm,
     showToast,
+    pushDataToGoogleSheet,
   } = useApp();
 
   const [activeSlip, setActiveSlip] = useState<MonthlyPayrollSlip | null>(null);
   const [evalStaff, setEvalStaff] = useState<Staff | null>(null);
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [syncedToast, setSyncedToast] = useState(false);
+  const [syncMessage, setSyncMessage] = useState<string>('');
 
-  const handleSyncFromTimesheets = () => {
+  const handleSyncFromTimesheets = async () => {
     generateMonthlyPayrollForStaff(currentMonth);
     setSyncedToast(true);
-    setTimeout(() => setSyncedToast(false), 3000);
+    setSyncMessage('Đang đồng bộ sang phiếu lương và Google Sheet...');
+    try {
+      const res = await pushDataToGoogleSheet();
+      if (res.success) {
+        setSyncMessage('Đã đồng bộ sang phiếu lương và Google Sheet thành công!');
+      } else {
+        setSyncMessage(`Phiếu lương cập nhật xong. Sheet lỗi: ${res.message}`);
+      }
+    } catch (e: any) {
+      setSyncMessage(`Phiếu lương cập nhật xong. Lỗi Sheet: ${e.message || e}`);
+    }
+    setTimeout(() => {
+      setSyncedToast(false);
+      setSyncMessage('');
+    }, 5000);
   };
 
   // Filter slips for current month
@@ -222,9 +238,9 @@ export const PayrollList: React.FC = () => {
 
           {/* Toast feedback */}
           {syncedToast && (
-            <div className="absolute -top-10 right-0 bg-emerald-800 text-emerald-100 text-xs font-bold px-3 py-1.5 rounded-lg shadow-lg flex items-center gap-1.5 animate-bounce z-20 whitespace-nowrap">
+            <div className="absolute -top-12 right-0 bg-emerald-800 text-emerald-100 text-xs font-bold px-3.5 py-2.5 rounded-lg shadow-lg flex items-center gap-1.5 animate-bounce z-20 whitespace-nowrap border border-emerald-600">
               <CheckCircle className="w-4 h-4 text-emerald-300" />
-              <span>Đã đồng bộ thành công dữ liệu Chấm công sang Phiếu lương!</span>
+              <span>{syncMessage || 'Đã đồng bộ thành công dữ liệu Chấm công sang Phiếu lương!'}</span>
             </div>
           )}
 
@@ -290,7 +306,7 @@ export const PayrollList: React.FC = () => {
               Nhấn nút bên dưới để tự động tạo phiếu lương cho tất cả nhân sự dựa trên dữ liệu chấm công và bảng kiểm KPI.
             </p>
             <button
-              onClick={() => generateMonthlyPayrollForStaff(currentMonth)}
+              onClick={handleSyncFromTimesheets}
               className="inline-flex items-center gap-2 px-4 py-2 bg-slate-900 text-white text-xs font-bold rounded-lg hover:bg-slate-800"
             >
               <Sparkles className="w-4 h-4 text-amber-300" />
