@@ -6,7 +6,8 @@ import {
   formatVND, 
   formatMonthDisplay, 
   exportElementToPDF, 
-  exportElementToPNG 
+  exportElementToPNG,
+  calculateKpiFromScores
 } from '../../utils/formatters';
 import { ManagerSignatureSvg, FinanceSignatureSvg } from '../../utils/signatures';
 import { 
@@ -189,24 +190,60 @@ Trân trọng cảm ơn sự đồng hành và cống hiến của bạn cùng T
     return isSameMonth && isForStaff;
   });
 
-  // Fallback to virtual/unrated checklist templates if no official evaluations exist for this month
-  let displayEvaluations: any[] = [...staffEvaluations];
-  if (displayEvaluations.length === 0 && currentStaff) {
+  // Populating displayEvaluations with all assigned checklists for the employee.
+  // If an official evaluation exists for an assigned template, use it.
+  // Otherwise, create a virtual evaluation at 100% (handling linked templates dynamically).
+  let displayEvaluations: any[] = [];
+  if (currentStaff) {
     const assignedTemplates = getStaffAssignedChecklists(currentStaff, checklistTemplates);
+    const coveredTemplateIds = new Set<string>();
+
     if (assignedTemplates.length > 0) {
-      displayEvaluations = assignedTemplates.map(t => ({
-        id: `virtual_eval_${t.id}_${currentStaff.id}`,
-        staffId: currentStaff.id,
-        month: normMonth,
-        templateId: t.id,
-        evaluationDate: new Date().toISOString().substring(0, 10),
-        evaluatorName: 'Ban kiểm duyệt',
-        scores: {}, // Empty scores will fallback to 100% in the renderer
-        calculatedTotalKpi: 100,
-        notes: '',
-        isVirtual: true,
-      }));
+      displayEvaluations = assignedTemplates.map(t => {
+        coveredTemplateIds.add(t.id);
+        const officialEval = staffEvaluations.find(e => e.templateId === t.id);
+        if (officialEval) {
+          return officialEval;
+        }
+
+        // Generate virtual 100% evaluation, but account for linked template scores if they exist
+        const officialSoanBai = staffEvaluations.find(e => e.templateId === 'chk_soan_bai');
+        const linkedScore = officialSoanBai ? officialSoanBai.calculatedTotalKpi : 100;
+
+        const virtualScores: Record<string, number> = {};
+        let calculatedKpi = 100;
+        if (t.linkedTemplateId) {
+          if (t.id === 'chk_day_hoc') {
+            virtualScores['dh_c1_2'] = linkedScore;
+          } else if (t.id === 'chk_tro_ly') {
+            virtualScores['tl_c1_1'] = linkedScore;
+          }
+          calculatedKpi = calculateKpiFromScores(t, virtualScores, linkedScore);
+        }
+
+        return {
+          id: `virtual_eval_${t.id}_${currentStaff.id}`,
+          staffId: currentStaff.id,
+          month: normMonth,
+          templateId: t.id,
+          evaluationDate: new Date().toISOString().substring(0, 10),
+          evaluatorName: 'Ban kiểm duyệt',
+          scores: virtualScores,
+          calculatedTotalKpi: calculatedKpi,
+          notes: '',
+          isVirtual: true,
+        };
+      });
     }
+
+    // Add any remaining official evaluations that were not in assignedTemplates
+    staffEvaluations.forEach(e => {
+      if (e.templateId && !coveredTemplateIds.has(e.templateId)) {
+        displayEvaluations.push(e);
+      }
+    });
+  } else {
+    displayEvaluations = [...staffEvaluations];
   }
 
   return (

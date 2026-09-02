@@ -481,10 +481,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           }
         }
 
-        const staffEvals = curEvals.filter(e => (e.staffId === staff.id || (staff.code && e.staffId === staff.code)) && (e.month || '').trim().substring(0, 7) === normMonth);
-        if (staffEvals.length > 0) {
-          return staffEvals[0].calculatedTotalKpi;
-        }
         return 100;
       };
 

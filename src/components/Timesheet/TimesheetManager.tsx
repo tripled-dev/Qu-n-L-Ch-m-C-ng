@@ -151,12 +151,6 @@ export const TimesheetManager: React.FC = () => {
           }
         }
 
-        if (staffEvaluations.length > 0) {
-          const assigned = getStaffAssignedChecklists(staff, checklistTemplates);
-          const matchedAssignedEval = staffEvaluations.find(e => assigned.some(a => a.id === e.templateId));
-          if (matchedAssignedEval) return matchedAssignedEval.calculatedTotalKpi;
-          return staffEvaluations[0].calculatedTotalKpi;
-        }
         return 100;
       };
 
