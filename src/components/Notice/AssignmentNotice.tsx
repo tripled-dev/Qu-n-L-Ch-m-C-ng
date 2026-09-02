@@ -188,34 +188,19 @@ export const AssignmentNotice: React.FC = () => {
           </div>
 
           {/* Signature Box */}
-          <div className="flex justify-end mt-10 text-center">
-            <div className="w-64 flex flex-col items-center">
-              <p className="font-bold text-sm sm:text-base uppercase tracking-tight text-black">
-                {orgSettings.managerTitle || 'ĐIỀU HÀNH TRIPLE D'}
-              </p>
-              <p className="text-xs italic text-slate-600 mb-2">
-                (Ký và duyệt)
-              </p>
-
-              {/* Signature from configured orgSettings */}
-              <div className="h-20 flex items-center justify-center my-1">
-                {(() => {
-                  const img = orgSettings.managerSignatureImg;
-                  if (img && img !== 'none') {
-                    return <img src={img} alt="Chữ ký người điều hành" className="max-h-18 max-w-[180px] object-contain" />;
-                  }
-                  if (img === 'none') {
-                    return <span className="text-xs italic text-slate-400 no-print">(Chưa ký)</span>;
-                  }
-                  if (orgSettings.showSignatures) {
-                    return <ManagerSignatureSvg className="w-48 h-18" />;
-                  }
-                  return null;
-                })()}
+          <div className="flex justify-end mt-12 text-center">
+            <div className="w-72 flex flex-col items-center justify-between min-h-[150px]">
+              <div>
+                <p className="font-bold text-xs sm:text-sm uppercase tracking-wider text-slate-700 mb-1">
+                  NGƯỜI ĐÁNH GIÁ / TRƯỞNG BỘ PHẬN
+                </p>
+                <p className="text-xs sm:text-sm italic text-slate-500">
+                  (Ký và duyệt)
+                </p>
               </div>
-
-              <p className="font-bold text-sm sm:text-base text-black mt-2">
-                {orgSettings.managerName || 'Đặng Tuấn Anh'}
+              <div className="h-14"></div>
+              <p className="font-bold text-sm sm:text-base text-black">
+                Ban kiểm duyệt
               </p>
             </div>
           </div>

@@ -36,8 +36,8 @@ export const INITIAL_CHECKLIST_TEMPLATES: ChecklistTemplate[] = [
         criteria: [
           {
             id: 'dh_c1_1',
-            title: 'Chủ động tự soạn bài theo đúng lịch trình, thời khóa biểu và nội dung được phê duyệt. Đẩy tài liệu/slide giảng dạy lên drive để được kiểm duyệt trước ca dạy ít nhất 2 ngày.',
-            details: ['Đúng lịch trình TKB', 'Đẩy drive trước ≥ 2 ngày'],
+            title: 'Chủ động tự soạn bài theo đúng lịch trình, thời khóa biểu và nội dung được phê duyệt. Đẩy tài liệu/slide giảng dạy lên drive để được kiểm duyệt trước ca dạy ít nhất 1 tuần.',
+            details: ['Đúng lịch trình TKB', 'Đẩy drive trước ≥ 1 tuần'],
             weight: 10,
           },
           {
@@ -48,7 +48,7 @@ export const INITIAL_CHECKLIST_TEMPLATES: ChecklistTemplate[] = [
           },
           {
             id: 'dh_c1_3',
-            title: 'Đảm bảo câu hỏi/nội dung thuộc bản quyền sở hữu của Triple D.',
+            title: 'Đảm bảo câu hỏi/nội dung thuộc bản quyền sở hữu có tính độc quyền.',
             details: ['Bản quyền thuộc Triple D', 'Không sao chép trái phép'],
             weight: 10,
           },
@@ -139,38 +139,50 @@ export const INITIAL_CHECKLIST_TEMPLATES: ChecklistTemplate[] = [
         id: 'tg_g1',
         stt: 1,
         groupName: 'Chấm bài & Cập nhật đáp án',
-        totalWeight: 60,
+        totalWeight: 35,
         criteria: [
           {
             id: 'tg_c1_1',
-            title: 'Chấm BTVN đầy đủ và đúng hạn, kịp thời trên hệ thống web của Triple D. Nhắc nhở học sinh nộp BTVN đúng hạn.',
-            details: ['Chấm BTVN đầy đủ, đúng hạn', 'Nhắc nhở học sinh nộp bài'],
+            title: 'Chấm BTVN đầy đủ và đúng hạn, kịp thời trên hệ thống web được cung cấp. Nhắc nhở học sinh nộp BTVN đúng hạn.',
+            details: ['Chấm BTVN đầy đủ, đúng hạn', 'Kịp thời trên hệ thống web', 'Nhắc nhở học sinh nộp bài'],
             weight: 20,
           },
           {
             id: 'tg_c1_2',
             title: 'Nhập chính xác số điểm của từng câu trên hệ thống. Nhận xét chi tiết từng câu và bài làm, chỉ rõ nhược điểm giúp học sinh cải thiện.',
-            details: ['Nhập điểm chính xác', 'Nhận xét chi tiết chỉ rõ nhược điểm'],
-            weight: 30,
+            details: ['Nhập chính xác điểm từng câu', 'Nhận xét chi tiết chỉ rõ nhược điểm'],
+            weight: 10,
           },
           {
             id: 'tg_c1_3',
             title: 'Cập nhật đáp án (sẽ được cung cấp) kịp thời cho các bạn học sinh.',
             details: ['Gửi đáp án kịp thời sau buổi học'],
-            weight: 10,
+            weight: 5,
           },
         ],
       },
       {
         id: 'tg_g2',
         stt: 2,
-        groupName: 'Kết nối & Tương tác nhóm lớp',
-        totalWeight: 10,
+        groupName: 'Đánh giá',
+        totalWeight: 30,
         criteria: [
           {
             id: 'tg_c2_1',
-            title: 'Duy trì không khí vui vẻ, tích cực trong nhóm tin nhắn của lớp. Chủ động tạo kết nối giữa người dạy, trợ giảng và học sinh.',
-            details: ['Không khí lớp tích cực', 'Kết nối tương tác giữa thầy và trò'],
+            title: 'Điểm danh và theo dõi chuyên cần, sĩ số, tình hình đi học hoặc nghỉ học của học sinh.',
+            details: ['Điểm danh và theo dõi chuyên cần', 'Sĩ số, tình hình đi học/nghỉ học'],
+            weight: 10,
+          },
+          {
+            id: 'tg_c2_2',
+            title: 'Cập nhật chuyên cần, điểm số vào bảng theo dõi để đánh giá năng lực từng học sinh.',
+            details: ['Cập nhật chuyên cần, điểm số vào bảng theo dõi', 'Đánh giá năng lực từng học sinh'],
+            weight: 10,
+          },
+          {
+            id: 'tg_c2_3',
+            title: 'Lập bảng xếp hạng đánh giá năng lực, thái độ, điểm số và chuyên cần của học sinh.',
+            details: ['Lập bảng xếp hạng đánh giá năng lực', 'Thái độ, điểm số và chuyên cần của học sinh'],
             weight: 10,
           },
         ],
@@ -179,18 +191,30 @@ export const INITIAL_CHECKLIST_TEMPLATES: ChecklistTemplate[] = [
         id: 'tg_g3',
         stt: 3,
         groupName: 'Chăm sóc & Động viên',
-        totalWeight: 30,
+        totalWeight: 35,
         criteria: [
           {
             id: 'tg_c3_1',
-            title: 'Chủ động hỏi thăm học sinh vào giữa mỗi đợt học để nắm tình hình & nguyện vọng. Thực hiện tổng hợp phản hồi/khó khăn của các em (nếu có) để báo cáo lại cho Triple D.',
-            details: ['Hỏi thăm giữa đợt học', 'Báo cáo khó khăn của học sinh'],
-            weight: 20,
+            title: 'Duy trì không khí vui vẻ, tích cực trong nhóm tin nhắn của lớp. Chủ động tạo kết nối giữa người dạy, trợ giảng và học sinh.',
+            details: ['Duy trì không khí vui vẻ, tích cực', 'Chủ động tạo kết nối'],
+            weight: 5,
           },
           {
             id: 'tg_c3_2',
-            title: 'Khuyến khích, động viên học sinh đăng ký tham gia các đợt học tiếp theo.',
-            details: ['Động viên học sinh học tập chuyên cần và tái đăng ký'],
+            title: 'Chủ động hỏi thăm học sinh vào giữa mỗi đợt học để nắm tình hình & nguyện vọng. Thực hiện tổng hợp phản hồi/khó khăn của các em (nếu có) để báo cáo lại cho hệ thống.',
+            details: ['Hỏi thăm học sinh vào giữa mỗi đợt học', 'Tổng hợp phản hồi/khó khăn báo cáo lại'],
+            weight: 10,
+          },
+          {
+            id: 'tg_c3_3',
+            title: 'Giải đáp câu hỏi và thắc mắc của học sinh.',
+            details: ['Giải đáp câu hỏi và thắc mắc của học sinh'],
+            weight: 10,
+          },
+          {
+            id: 'tg_c3_4',
+            title: 'Sau mỗi đợt học, nhắn tin hỏi thăm từng học sinh và khuyến khích, động viên học sinh đăng ký tham gia các đợt học tiếp theo.',
+            details: ['Sau mỗi đợt học, nhắn tin hỏi thăm', 'Động viên đăng ký học tập đợt tiếp theo'],
             weight: 10,
           },
         ],
@@ -262,7 +286,7 @@ export const INITIAL_CHECKLIST_TEMPLATES: ChecklistTemplate[] = [
         criteria: [
           {
             id: 'tl_c1_1',
-            title: 'Thực hiện soạn tài liệu theo yêu cầu của ban quản lý Triple D. Được đánh giá theo tiêu chí của "Bảng Kiểm Soạn Bài".',
+            title: 'Thực hiện soạn tài liệu theo yêu cầu của ban quản lý. Được đánh giá theo tiêu chí của "Bảng Kiểm Soạn Bài".',
             details: ['Soạn đúng yêu cầu ban quản lý', 'Quy đổi qua Bảng Kiểm Soạn Bài'],
             weight: 80,
           },
@@ -276,7 +300,7 @@ export const INITIAL_CHECKLIST_TEMPLATES: ChecklistTemplate[] = [
         criteria: [
           {
             id: 'tl_c2_1',
-            title: 'Hỗ trợ thực hiện công việc theo yêu cầu của Triple D theo chỉ đạo của ban quản lý.',
+            title: 'Hỗ trợ thực hiện công việc theo yêu cầu và theo chỉ đạo của ban quản lý.',
             details: ['Hỗ trợ công việc chung theo điều động'],
             weight: 15,
           },
@@ -305,13 +329,13 @@ export const INITIAL_CHECKLIST_TEMPLATES: ChecklistTemplate[] = [
         criteria: [
           {
             id: 'sb_c1_1',
-            title: 'Hoàn thành đúng số lượng bài soạn, ngân hàng câu hỏi, đề thi thử, tài liệu ôn tập định kỳ,... theo yêu cầu được giao.',
+            title: 'Hoàn thành đúng số lượng bài soạn, ngân hàng câu hỏi, đề thi thử, tài liệu ôn tập định kỳ,…theo yêu cầu được giao.',
             details: ['Đúng số lượng bài/câu hỏi yêu cầu'],
             weight: 35,
           },
           {
             id: 'sb_c1_2',
-            title: 'Bàn giao tài liệu đúng thời hạn cam kết với ban quản lý.',
+            title: 'Bàn giao tài liệu đúng thời hạn cam kết với.',
             details: ['Bàn giao đúng deadline cam kết'],
             weight: 30,
           },
@@ -331,7 +355,7 @@ export const INITIAL_CHECKLIST_TEMPLATES: ChecklistTemplate[] = [
           },
           {
             id: 'sb_c2_2',
-            title: 'Có đáp án / lời giải chi tiết kèm theo (nếu cần).',
+            title: 'Có đáp án/lời giải chi tiết kèm theo (nếu cần).',
             details: ['Lời giải chi tiết, rõ ràng'],
             weight: 5,
           },

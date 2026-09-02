@@ -159,6 +159,18 @@ export async function exportElementToPDF(elementId: string, fileName: string) {
     return;
   }
 
+  // Preserve original inline styles to restore after export
+  const originalWidth = element.style.width;
+  const originalMaxWidth = element.style.maxWidth;
+  const originalMinWidth = element.style.minWidth;
+  const originalBoxSizing = element.style.boxSizing;
+
+  // Temporarily force standard A4 portrait layout width (~794px at 96 DPI)
+  element.style.width = '794px';
+  element.style.maxWidth = '794px';
+  element.style.minWidth = '794px';
+  element.style.boxSizing = 'border-box';
+
   try {
     if (document.fonts?.ready) {
       await document.fonts.ready;
@@ -220,6 +232,12 @@ export async function exportElementToPDF(elementId: string, fileName: string) {
   } catch (err) {
     console.error('Lỗi khi xuất PDF:', err);
     window.print();
+  } finally {
+    // Restore original inline styles
+    element.style.width = originalWidth;
+    element.style.maxWidth = originalMaxWidth;
+    element.style.minWidth = originalMinWidth;
+    element.style.boxSizing = originalBoxSizing;
   }
 }
 
@@ -229,6 +247,18 @@ export async function exportElementToPNG(elementId: string, fileName: string) {
     console.error(`Element #${elementId} not found`);
     return;
   }
+
+  // Preserve original inline styles to restore after export
+  const originalWidth = element.style.width;
+  const originalMaxWidth = element.style.maxWidth;
+  const originalMinWidth = element.style.minWidth;
+  const originalBoxSizing = element.style.boxSizing;
+
+  // Temporarily force standard A4 portrait layout width (~794px at 96 DPI)
+  element.style.width = '794px';
+  element.style.maxWidth = '794px';
+  element.style.minWidth = '794px';
+  element.style.boxSizing = 'border-box';
 
   try {
     if (document.fonts?.ready) {
@@ -248,6 +278,12 @@ export async function exportElementToPNG(elementId: string, fileName: string) {
     link.click();
   } catch (err) {
     console.error('Lỗi khi xuất PNG:', err);
+  } finally {
+    // Restore original inline styles
+    element.style.width = originalWidth;
+    element.style.maxWidth = originalMaxWidth;
+    element.style.minWidth = originalMinWidth;
+    element.style.boxSizing = originalBoxSizing;
   }
 }
 

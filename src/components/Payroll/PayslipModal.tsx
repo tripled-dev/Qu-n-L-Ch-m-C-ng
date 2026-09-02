@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
 import { MonthlyPayrollSlip, PieceworkSalaryItem } from '../../types';
+import { getStaffAssignedChecklists } from '../../data/roleDefinitions';
 import { 
   formatVND, 
   formatMonthDisplay, 
@@ -31,7 +32,7 @@ interface PayslipModalProps {
 }
 
 export const PayslipModal: React.FC<PayslipModalProps> = ({ slip, onClose }) => {
-  const { savePayrollSlip, updateSlipStatus, orgSettings, showToast, staffList } = useApp();
+  const { savePayrollSlip, updateSlipStatus, orgSettings, showToast, staffList, evaluations, checklistTemplates } = useApp();
   const [isEditing, setIsEditing] = useState(false);
   const [editedSlip, setEditedSlip] = useState<MonthlyPayrollSlip>({ ...slip });
   const [copied, setCopied] = useState(false);
@@ -177,6 +178,36 @@ Trân trọng cảm ơn sự đồng hành và cống hiến của bạn cùng T
   const currentStaff = staffList.find(s => s.id === currentData.staffId || s.code === currentData.staffCode);
   const staffBankName = currentStaff?.bankName || '';
   const isTeachingType = currentData.formatType === 'teaching';
+
+  const normMonth = (currentData.month || '').trim().substring(0, 7);
+  const staffEvaluations = evaluations.filter(e => {
+    const isSameMonth = (e.month || '').trim().substring(0, 7) === normMonth;
+    const isForStaff = e.staffId === currentData.staffId || 
+                       (currentData.staffCode && e.staffId === currentData.staffCode) ||
+                       (currentStaff?.id && e.staffId === currentStaff.id) ||
+                       (currentStaff?.code && e.staffId === currentStaff.code);
+    return isSameMonth && isForStaff;
+  });
+
+  // Fallback to virtual/unrated checklist templates if no official evaluations exist for this month
+  let displayEvaluations: any[] = [...staffEvaluations];
+  if (displayEvaluations.length === 0 && currentStaff) {
+    const assignedTemplates = getStaffAssignedChecklists(currentStaff, checklistTemplates);
+    if (assignedTemplates.length > 0) {
+      displayEvaluations = assignedTemplates.map(t => ({
+        id: `virtual_eval_${t.id}_${currentStaff.id}`,
+        staffId: currentStaff.id,
+        month: normMonth,
+        templateId: t.id,
+        evaluationDate: new Date().toISOString().substring(0, 10),
+        evaluatorName: 'Ban kiểm duyệt',
+        scores: {}, // Empty scores will fallback to 100% in the renderer
+        calculatedTotalKpi: 100,
+        notes: '',
+        isVirtual: true,
+      }));
+    }
+  }
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-2 sm:p-4">
@@ -872,223 +903,233 @@ Trân trọng cảm ơn sự đồng hành và cống hiến của bạn cùng T
             })()}
 
             {/* Signatures Area */}
-            <div className="grid grid-cols-2 gap-8 text-center pt-2">
+            <div className="grid grid-cols-2 gap-8 text-center pt-8 break-inside-avoid print:break-inside-avoid" style={{ pageBreakInside: 'avoid', breakInside: 'avoid' }}>
               
-              {/* Manager Column */}
-              <div className="flex flex-col items-center">
-                {isEditing ? (
-                  <input
-                    type="text"
-                    value={editedSlip.signatures.managerTitle}
-                    onChange={e => setEditedSlip({
-                      ...editedSlip,
-                      signatures: { ...editedSlip.signatures, managerTitle: e.target.value }
-                    })}
-                    className="font-bold text-xs sm:text-sm uppercase text-center border-b border-slate-400 px-1 py-0.5 w-48 mb-1"
-                  />
-                ) : (
-                  <p className="font-bold text-sm sm:text-base uppercase tracking-tight text-black">
-                    {currentData.signatures.managerTitle || orgSettings.managerTitle}
+              {/* Employee Column */}
+              <div className="flex flex-col items-center justify-between min-h-[160px]">
+                <div>
+                  <p className="font-bold text-xs sm:text-sm uppercase tracking-wider text-slate-700 mb-1">
+                    NHÂN SỰ ĐƯỢC ĐÁNH GIÁ
                   </p>
-                )}
-                
-                <p className="text-xs sm:text-sm italic text-slate-600 mb-1">
-                  (Ký và ghi rõ họ tên)
-                </p>
-
-                {/* Hidden File Input */}
-                <input
-                  type="file"
-                  ref={editManagerImgRef}
-                  onChange={e => handleEditSignatureUpload(e, 'managerSignatureImg')}
-                  accept="image/*"
-                  className="hidden"
-                />
-                
-                {/* Signature Image / Vector */}
-                <div className="h-20 flex items-center justify-center my-1">
-                  {(() => {
-                    const img = currentData.signatures.managerSignatureImg !== undefined
-                      ? currentData.signatures.managerSignatureImg
-                      : orgSettings.managerSignatureImg;
-
-                    if (img && img !== 'none') {
-                      return <img src={img} alt="Chữ ký người điều hành" className="max-h-18 max-w-[180px] object-contain" />;
-                    }
-                    if (img === 'none') {
-                      return <span className="text-xs italic text-slate-400 no-print">(Chưa ký)</span>;
-                    }
-                    if (orgSettings.showSignatures) {
-                      return <ManagerSignatureSvg className="w-44 h-18" />;
-                    }
-                    return null;
-                  })()}
+                  <p className="text-xs sm:text-sm italic text-slate-500">
+                    (Ký xác nhận)
+                  </p>
                 </div>
-
-                {isEditing && (
-                  <div className="no-print my-1 flex items-center gap-1.5 flex-wrap justify-center">
-                    <button
-                      type="button"
-                      onClick={() => editManagerImgRef.current?.click()}
-                      className="px-2 py-0.5 bg-slate-100 hover:bg-slate-200 text-slate-800 text-[11px] font-bold rounded border border-slate-300 flex items-center gap-1 cursor-pointer"
-                      title="Tải ảnh chữ ký lên"
-                    >
-                      <Upload className="w-3 h-3 text-slate-600" />
-                      <span>Up ảnh</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setEditedSlip(prev => ({
-                        ...prev,
-                        signatures: { ...prev.signatures, managerSignatureImg: 'none' }
-                      }))}
-                      className="px-2 py-0.5 bg-rose-50 hover:bg-rose-100 text-rose-700 text-[11px] font-bold rounded border border-rose-200 flex items-center gap-1 cursor-pointer"
-                      title="Xóa chữ ký (để trống)"
-                    >
-                      <Trash2 className="w-3 h-3" />
-                      <span>Xóa</span>
-                    </button>
-                    {editedSlip.signatures.managerSignatureImg !== undefined && (
-                      <button
-                        type="button"
-                        onClick={() => setEditedSlip(prev => ({
-                          ...prev,
-                          signatures: { ...prev.signatures, managerSignatureImg: undefined }
-                        }))}
-                        className="px-1.5 py-0.5 bg-slate-50 hover:bg-slate-100 text-slate-600 text-[11px] font-semibold rounded border border-slate-200 cursor-pointer"
-                        title="Khôi phục chữ ký mặc định"
-                      >
-                        <RotateCcw className="w-3 h-3" />
-                      </button>
-                    )}
-                  </div>
-                )}
-
-                {isEditing ? (
-                  <input
-                    type="text"
-                    value={editedSlip.signatures.managerName}
-                    onChange={e => setEditedSlip({
-                      ...editedSlip,
-                      signatures: { ...editedSlip.signatures, managerName: e.target.value }
-                    })}
-                    className="font-bold text-xs sm:text-sm text-center border-b border-slate-400 px-1 py-0.5 w-48 mt-1"
-                  />
-                ) : (
-                  <p className="font-bold text-sm sm:text-base text-black mt-1">
-                    {currentData.signatures.managerName || orgSettings.managerName}
-                  </p>
-                )}
+                <div className="h-16"></div> {/* Whitespace for signing */}
+                <p className="font-bold text-sm sm:text-base text-black">
+                  {currentData.staffName}
+                </p>
               </div>
 
-              {/* Finance Column */}
-              <div className="flex flex-col items-center">
-                {isEditing ? (
-                  <input
-                    type="text"
-                    value={editedSlip.signatures.financeTitle}
-                    onChange={e => setEditedSlip({
-                      ...editedSlip,
-                      signatures: { ...editedSlip.signatures, financeTitle: e.target.value }
-                    })}
-                    className="font-bold text-xs sm:text-sm uppercase text-center border-b border-slate-400 px-1 py-0.5 w-48 mb-1"
-                  />
-                ) : (
-                  <p className="font-bold text-sm sm:text-base uppercase tracking-tight text-black">
-                    {currentData.signatures.financeTitle || orgSettings.financeTitle}
+              {/* Evaluator Column */}
+              <div className="flex flex-col items-center justify-between min-h-[160px]">
+                <div>
+                  <p className="font-bold text-xs sm:text-sm uppercase tracking-wider text-slate-700 mb-1">
+                    NGƯỜI ĐÁNH GIÁ / TRƯỞNG BỘ PHẬN
                   </p>
-                )}
-
-                <p className="text-xs sm:text-sm italic text-slate-600 mb-1">
-                  (Ký và duyệt)
-                </p>
-
-                {/* Hidden File Input */}
-                <input
-                  type="file"
-                  ref={editFinanceImgRef}
-                  onChange={e => handleEditSignatureUpload(e, 'financeSignatureImg')}
-                  accept="image/*"
-                  className="hidden"
-                />
-
-                {/* Signature Image / Vector */}
-                <div className="h-20 flex items-center justify-center my-1">
-                  {(() => {
-                    const img = currentData.signatures.financeSignatureImg !== undefined
-                      ? currentData.signatures.financeSignatureImg
-                      : orgSettings.financeSignatureImg;
-
-                    if (img && img !== 'none') {
-                      return <img src={img} alt="Chữ ký phụ trách kinh tế" className="max-h-18 max-w-[180px] object-contain" />;
-                    }
-                    if (img === 'none') {
-                      return <span className="text-xs italic text-slate-400 no-print">(Chưa ký)</span>;
-                    }
-                    if (orgSettings.showSignatures) {
-                      return <FinanceSignatureSvg className="w-44 h-18" />;
-                    }
-                    return null;
-                  })()}
+                  <p className="text-xs sm:text-sm italic text-slate-500">
+                    (Ký và duyệt)
+                  </p>
                 </div>
-
-                {isEditing && (
-                  <div className="no-print my-1 flex items-center gap-1.5 flex-wrap justify-center">
-                    <button
-                      type="button"
-                      onClick={() => editFinanceImgRef.current?.click()}
-                      className="px-2 py-0.5 bg-slate-100 hover:bg-slate-200 text-slate-800 text-[11px] font-bold rounded border border-slate-300 flex items-center gap-1 cursor-pointer"
-                      title="Tải ảnh chữ ký lên"
-                    >
-                      <Upload className="w-3 h-3 text-slate-600" />
-                      <span>Up ảnh</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setEditedSlip(prev => ({
-                        ...prev,
-                        signatures: { ...prev.signatures, financeSignatureImg: 'none' }
-                      }))}
-                      className="px-2 py-0.5 bg-rose-50 hover:bg-rose-100 text-rose-700 text-[11px] font-bold rounded border border-rose-200 flex items-center gap-1 cursor-pointer"
-                      title="Xóa chữ ký (để trống)"
-                    >
-                      <Trash2 className="w-3 h-3" />
-                      <span>Xóa</span>
-                    </button>
-                    {editedSlip.signatures.financeSignatureImg !== undefined && (
-                      <button
-                        type="button"
-                        onClick={() => setEditedSlip(prev => ({
-                          ...prev,
-                          signatures: { ...prev.signatures, financeSignatureImg: undefined }
-                        }))}
-                        className="px-1.5 py-0.5 bg-slate-50 hover:bg-slate-100 text-slate-600 text-[11px] font-semibold rounded border border-slate-200 cursor-pointer"
-                        title="Khôi phục chữ ký mặc định"
-                      >
-                        <RotateCcw className="w-3 h-3" />
-                      </button>
-                    )}
-                  </div>
-                )}
-
-                {isEditing ? (
-                  <input
-                    type="text"
-                    value={editedSlip.signatures.financeName}
-                    onChange={e => setEditedSlip({
-                      ...editedSlip,
-                      signatures: { ...editedSlip.signatures, financeName: e.target.value }
-                    })}
-                    className="font-bold text-xs sm:text-sm text-center border-b border-slate-400 px-1 py-0.5 w-48 mt-1"
-                  />
-                ) : (
-                  <p className="font-bold text-sm sm:text-base text-black mt-1">
-                    {currentData.signatures.financeName || orgSettings.financeName}
-                  </p>
-                )}
+                <div className="h-16"></div> {/* Whitespace for signing */}
+                <p className="font-bold text-sm sm:text-base text-black">
+                  Ban kiểm duyệt
+                </p>
               </div>
 
             </div>
+
+            {/* KPI Checklist Scores Block */}
+            {displayEvaluations.length > 0 && (
+              <div className="mt-8 border-t-2 border-slate-200 pt-6">
+                {displayEvaluations.map((evalRec, evalIdx) => {
+                  const template = checklistTemplates.find(t => t.id === evalRec.templateId);
+                  return (
+                    <div 
+                      key={evalRec.id} 
+                      className="border-t border-slate-300 pt-8 break-inside-avoid print:break-inside-avoid print:break-before-page mt-12"
+                      style={{ 
+                        pageBreakBefore: 'always', 
+                        pageBreakInside: 'avoid', 
+                        breakInside: 'avoid' 
+                      }}
+                    >
+                      {/* Logo and Header */}
+                      <div className="flex items-center justify-between border-b border-black pb-3 mb-6 break-inside-avoid print:break-inside-avoid" style={{ pageBreakInside: 'avoid', breakInside: 'avoid' }}>
+                        <div>
+                          <h4 className="font-bold text-lg text-black uppercase tracking-tight">ÔN THI HSGQG SINH HỌC</h4>
+                          <p className="text-xs text-slate-500">Hệ thống quản trị nhân sự & đào tạo</p>
+                        </div>
+                        <div className="text-right shrink-0">
+                          <span className="font-mono text-xs font-bold border border-black px-2 py-0.5 rounded uppercase whitespace-nowrap">
+                            KPI - {template?.code || 'BK'}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Sheet Title */}
+                      <div className="text-center mb-6 break-inside-avoid print:break-inside-avoid" style={{ pageBreakInside: 'avoid', breakInside: 'avoid' }}>
+                        <h2 className="text-xl sm:text-2xl font-bold uppercase text-black leading-tight">
+                          BẢNG ĐÁNH GIÁ CHẤT LƯỢNG CÔNG VIỆC (KPI)
+                        </h2>
+                        <p className="text-xs sm:text-sm italic font-serif text-slate-700 mt-1">
+                          Áp dụng cho kỳ: Tháng {formatMonthDisplay(currentData.month)}
+                        </p>
+                      </div>
+
+                      {/* Staff & Evaluator Metadata Table */}
+                      <table 
+                        className="w-full border-collapse border border-black text-xs sm:text-sm mb-6 break-inside-avoid print:break-inside-avoid"
+                        style={{ pageBreakInside: 'avoid', breakInside: 'avoid' }}
+                      >
+                        <tbody>
+                          <tr className="border-b border-black break-inside-avoid print:break-inside-avoid" style={{ pageBreakInside: 'avoid', breakInside: 'avoid' }}>
+                            <td className="border-r border-black p-2.5 w-[50%]">
+                              <span>Nhân sự được đánh giá: </span>
+                              <strong className="text-black">{currentData.staffName}</strong>
+                            </td>
+                            <td className="p-2.5 w-[50%]">
+                              <span>Mã nhân viên: </span>
+                              <strong className="text-black">{currentData.staffCode || '—'}</strong>
+                            </td>
+                          </tr>
+                          <tr className="border-b border-black break-inside-avoid print:break-inside-avoid" style={{ pageBreakInside: 'avoid', breakInside: 'avoid' }}>
+                            <td className="border-r border-black p-2.5">
+                              <span>Người đánh giá: </span>
+                              <strong className="text-black">{evalRec.evaluatorName || 'Ban kiểm duyệt'}</strong>
+                            </td>
+                            <td className="p-2.5">
+                              <span>Ngày đánh giá: </span>
+                              <strong className="text-black">{evalRec.evaluationDate ? new Date(evalRec.evaluationDate).toLocaleDateString('vi-VN') : '—'}</strong>
+                            </td>
+                          </tr>
+                          <tr className="bg-slate-50 break-inside-avoid print:break-inside-avoid" style={{ pageBreakInside: 'avoid', breakInside: 'avoid' }}>
+                            <td className="border-r border-black p-2.5">
+                              <span>Bảng kiểm áp dụng: </span>
+                              <strong className="text-black">{template?.title || 'Bảng kiểm chuyên môn'}</strong>
+                            </td>
+                            <td className="p-2.5">
+                              <span>Điểm KPI tổng hợp: </span>
+                              <strong className="text-base text-black font-extrabold">{evalRec.calculatedTotalKpi}%</strong>
+                            </td>
+                          </tr>
+                        </tbody>
+                      </table>
+
+                      {/* Criteria Scorecard Table */}
+                      <table 
+                        className="w-full border-collapse border border-black text-xs sm:text-sm mb-6 break-inside-avoid print:break-inside-avoid"
+                        style={{ pageBreakInside: 'avoid', breakInside: 'avoid' }}
+                      >
+                        <thead>
+                          <tr className="bg-slate-100 border-b border-black font-bold text-center break-inside-avoid print:break-inside-avoid" style={{ pageBreakInside: 'avoid', breakInside: 'avoid' }}>
+                            <th className="border-r border-black p-2 w-[8%] font-bold">STT</th>
+                            <th className="border-r border-black p-2 w-[52%] text-left pl-3 font-bold">Tiêu chí chi tiết</th>
+                            <th className="border-r border-black p-2 w-[12%] font-bold">Trọng số</th>
+                            <th className="border-r border-black p-2 w-[13%] font-bold">Đánh giá</th>
+                            <th className="p-2 w-[15%] font-bold text-center">Đóng góp</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {template?.groups.map((group) => (
+                            <React.Fragment key={group.id}>
+                              {/* Group Header Row */}
+                              <tr className="bg-slate-50 border-b border-black font-bold break-inside-avoid print:break-inside-avoid" style={{ pageBreakInside: 'avoid', breakInside: 'avoid' }}>
+                                <td className="border-r border-black p-2 text-center font-bold">{group.stt}</td>
+                                <td className="border-r border-black p-2 pl-3 font-bold uppercase text-black" colSpan={4}>
+                                  {group.groupName} (Trọng số nhóm: {group.totalWeight}%)
+                                </td>
+                              </tr>
+                              {/* Criteria Rows */}
+                              {group.criteria.map((crit, cIdx) => {
+                                const score = evalRec.scores[crit.id] ?? 100;
+                                const contribution = Math.round((crit.weight * score / 100) * 10) / 10;
+                                return (
+                                  <tr key={crit.id} className="border-b border-black text-center break-inside-avoid print:break-inside-avoid" style={{ pageBreakInside: 'avoid', breakInside: 'avoid' }}>
+                                    <td className="border-r border-black p-2 text-slate-500 font-mono">
+                                      {group.stt}.{cIdx + 1}
+                                    </td>
+                                    <td className="border-r border-black p-2 text-left pl-3 leading-relaxed">
+                                      <div className="font-semibold text-black">{crit.title}</div>
+                                      {crit.details && crit.details.length > 0 && (
+                                        <div className="mt-1 pl-3 text-[11px] text-slate-600 space-y-0.5">
+                                          {crit.details.map((detail, dIdx) => (
+                                            <div key={dIdx} className="flex items-start gap-1">
+                                              <span>•</span>
+                                              <span>{detail}</span>
+                                            </div>
+                                          ))}
+                                        </div>
+                                      )}
+                                    </td>
+                                    <td className="border-r border-black p-2 font-mono">{crit.weight}%</td>
+                                    <td className="border-r border-black p-2 font-bold text-black font-mono">{score}%</td>
+                                    <td className="p-2 font-bold text-slate-900 font-mono">{contribution}%</td>
+                                  </tr>
+                                );
+                              })}
+                            </React.Fragment>
+                          ))}
+                          
+                          {/* Total KPI Summary Row */}
+                          <tr className="border-t-2 border-black bg-slate-50 font-bold text-sm break-inside-avoid print:break-inside-avoid" style={{ pageBreakInside: 'avoid', breakInside: 'avoid' }}>
+                            <td className="border-r border-black p-3 text-left pl-3" colSpan={2}>
+                              TỔNG KẾT HIỆU SUẤT KPI THÁNG
+                            </td>
+                            <td className="border-r border-black p-3 font-mono">100%</td>
+                            <td className="border-r border-black p-3"></td>
+                            <td className="p-3 text-center font-black text-lg text-black font-mono">
+                              {evalRec.calculatedTotalKpi}%
+                            </td>
+                          </tr>
+                        </tbody>
+                      </table>
+
+                      {/* Comments and Sign-off */}
+                      {evalRec.notes && (
+                        <div 
+                          className="border border-black p-3 text-xs sm:text-sm mb-6 text-slate-900 break-inside-avoid print:break-inside-avoid"
+                          style={{ pageBreakInside: 'avoid', breakInside: 'avoid' }}
+                        >
+                          <strong>Ghi chú & Nhận xét chi tiết:</strong>
+                          <p className="mt-1 italic text-slate-800 whitespace-pre-line leading-relaxed">
+                            "{evalRec.notes}"
+                          </p>
+                        </div>
+                      )}
+
+                      {/* Signature row for Evaluation Sheet */}
+                      <div 
+                        className="grid grid-cols-2 gap-8 text-center pt-8 break-inside-avoid print:break-inside-avoid"
+                        style={{ pageBreakInside: 'avoid', breakInside: 'avoid' }}
+                      >
+                        <div className="flex flex-col items-center justify-between min-h-[150px]">
+                          <div>
+                            <p className="font-bold text-xs uppercase tracking-wider text-slate-700 mb-1">
+                              NHÂN SỰ ĐƯỢC ĐÁNH GIÁ
+                            </p>
+                            <p className="text-[11px] italic text-slate-500">(Ký xác nhận)</p>
+                          </div>
+                          <div className="h-14"></div>
+                          <p className="font-bold text-sm text-black">{currentData.staffName}</p>
+                        </div>
+                        <div className="flex flex-col items-center justify-between min-h-[150px]">
+                          <div>
+                            <p className="font-bold text-xs uppercase tracking-wider text-slate-700 mb-1">
+                              NGƯỜI ĐÁNH GIÁ / TRƯỞNG BỘ PHẬN
+                            </p>
+                            <p className="text-[11px] italic text-slate-500">(Ký và duyệt)</p>
+                          </div>
+                          <div className="h-14"></div>
+                          <p className="font-bold text-sm text-black">Ban kiểm duyệt</p>
+                        </div>
+                      </div>
+
+                    </div>
+                  );
+                })}
+              </div>
+            )}
 
           </div>
 

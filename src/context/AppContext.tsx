@@ -311,13 +311,20 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const [checklistTemplates, setChecklistTemplates] = useState<ChecklistTemplate[]>(() => {
     const saved = localStorage.getItem(`${LOCAL_STORAGE_KEY_PREFIX}templates`);
+    let templates = INITIAL_CHECKLIST_TEMPLATES;
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          templates = parsed;
+        }
       } catch (e) {}
     }
-    return INITIAL_CHECKLIST_TEMPLATES;
+    return templates.map(t => {
+      const fresh = INITIAL_CHECKLIST_TEMPLATES.find(f => f.id === t.id);
+      if (fresh) return fresh;
+      return t;
+    });
   });
 
   const [timesheetEntries, setTimesheetEntries] = useState<TimesheetEntry[]>(() => {
