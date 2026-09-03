@@ -318,6 +318,7 @@ export function exportPayrollTableToCSV(data: any[], fileName: string) {
  * Ensures any historical or stale name reference is replaced with Đại Diện Lớp
  */
 export function cleanPersonName(name?: string | null, fallback = 'Đại Diện Lớp'): string {
+  if (name === '') return '';
   if (!name || typeof name !== 'string') return fallback;
   const n = name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
   if (

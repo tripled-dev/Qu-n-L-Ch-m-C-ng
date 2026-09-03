@@ -74,27 +74,27 @@ export const ContractModal: React.FC<ContractModalProps> = ({ staff, onClose }) 
   const currentYear = today.getFullYear().toString();
 
   const [agreementData, setAgreementData] = useState({
-    signingLocation: orgSettings?.location || 'Hà Nội',
+    signingLocation: orgSettings?.location ?? '',
     signingDay: currentDay,
     signingMonth: currentMonth,
     signingYear: currentYear,
     
     // Personal organizer: Đại Diện Lớp
-    employerName: orgSettings?.managerName || 'Đại Diện Lớp',
-    employerTitle: orgSettings?.managerTitle || 'Đại Diện Lớp',
-    employerScope: orgSettings?.orgName || 'Lớp Ôn Thi HSGQG Sinh Học',
-    employerPhone: orgSettings?.contactPhone || '0912 345 678',
-    employerEmail: orgSettings?.contactEmail || 'hsgqg.sinhhoc@gmail.com',
+    employerName: orgSettings?.managerName ?? '',
+    employerTitle: orgSettings?.managerTitle ?? '',
+    employerScope: orgSettings?.orgName ?? '',
+    employerPhone: orgSettings?.contactPhone ?? '',
+    employerEmail: orgSettings?.contactEmail ?? '',
 
     // Collaborator (Personal)
     staffName: staff.fullName,
     staffCode: staff.code,
     citizenId: staff.citizenId || staff.cccd || '',
     staffRole: staff.role,
-    phone: staff.phone || '0987.654.321',
-    email: staff.email || 'thanhvien.dayhoc@gmail.com',
-    bankAccount: staff.bankAccount || '---',
-    bankName: staff.bankName || 'Techcombank / Ngân hàng',
+    phone: staff.phone || '',
+    email: staff.email || '',
+    bankAccount: staff.bankAccount || '',
+    bankName: staff.bankName || '',
     bankOwner: staff.bankOwner || staff.fullName,
 
     // Agreed Rates
@@ -278,7 +278,7 @@ Thù lao thực nhận = [ Khối lượng hoàn thành × Đơn giá ] × [ % �
             <div className="border-b-2 border-slate-800 pb-4 mb-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
               <div>
                 <h2 className="font-bold text-base sm:text-lg uppercase tracking-wide text-black">
-                  LỚP ÔN THI HSGQG SINH HỌC • ĐẠI DIỆN LỚP
+                  {[agreementData.employerScope, agreementData.employerTitle].filter(Boolean).join(' • ') || 'THỐNG NHẤT CÔNG VIỆC'}
                 </h2>
                 <p className="text-xs sm:text-sm text-slate-600 italic">
                   Thống nhất nội dung công việc, tiêu chuẩn bảng kiểm & mức thù lao hỗ trợ lớp học
@@ -286,7 +286,7 @@ Thù lao thực nhận = [ Khối lượng hoàn thành × Đơn giá ] × [ % �
               </div>
               <div className="text-left sm:text-right text-xs sm:text-sm text-slate-700">
                 <p className="italic">
-                  {agreementData.signingLocation}, ngày {agreementData.signingDay} tháng {agreementData.signingMonth} năm {agreementData.signingYear}
+                  {agreementData.signingLocation ? `${agreementData.signingLocation}, ` : ''}ngày {agreementData.signingDay} tháng {agreementData.signingMonth} năm {agreementData.signingYear}
                 </p>
               </div>
             </div>
@@ -297,7 +297,7 @@ Thù lao thực nhận = [ Khối lượng hoàn thành × Đơn giá ] × [ % �
                 BẢNG THỐNG NHẤT CÔNG VIỆC & MỨC THÙ LAO
               </h1>
               <p className="text-xs sm:text-sm font-semibold text-slate-700 mt-1 italic">
-                (Phân công công việc, tiêu chuẩn bảng kiểm & mức thù lao Lớp Ôn Thi HSGQG Sinh Học)
+                (Phân công công việc, tiêu chuẩn bảng kiểm & mức thù lao {agreementData.employerScope || 'lớp học'})
               </p>
             </div>
 
@@ -325,7 +325,7 @@ Thù lao thực nhận = [ Khối lượng hoàn thành × Đơn giá ] × [ % �
                           className="border-b border-slate-400 px-1 font-bold text-black"
                         />
                       ) : (
-                        <strong className="font-bold text-black">{agreementData.employerName}</strong>
+                        <strong className="font-bold text-black">{agreementData.employerName || '—'}</strong>
                       )}
                     </td>
                     <td className="p-2.5 w-[50%]">
@@ -338,18 +338,18 @@ Thù lao thực nhận = [ Khối lượng hoàn thành × Đơn giá ] × [ % �
                           className="border-b border-slate-400 px-1 font-bold text-black"
                         />
                       ) : (
-                        <span className="font-bold text-black">{agreementData.employerTitle}</span>
+                        <span className="font-bold text-black">{agreementData.employerTitle || '—'}</span>
                       )}
                     </td>
                   </tr>
                   <tr className="border-b border-black">
                     <td className="border-r border-black p-2.5">
                       <span>Phạm vi: </span>
-                      <span>{agreementData.employerScope}</span>
+                      <span>{agreementData.employerScope || '—'}</span>
                     </td>
                     <td className="p-2.5">
                       <span>Khu vực: </span>
-                      <span>{agreementData.signingLocation}</span>
+                      <span>{agreementData.signingLocation || '—'}</span>
                     </td>
                   </tr>
                   <tr>
@@ -363,7 +363,7 @@ Thù lao thực nhận = [ Khối lượng hoàn thành × Đơn giá ] × [ % �
                           className="border-b border-slate-400 px-1"
                         />
                       ) : (
-                        <span>{agreementData.employerPhone}</span>
+                        <span>{agreementData.employerPhone || '—'}</span>
                       )}
                     </td>
                     <td className="p-2.5">
@@ -376,7 +376,7 @@ Thù lao thực nhận = [ Khối lượng hoàn thành × Đơn giá ] × [ % �
                           className="border-b border-slate-400 px-1"
                         />
                       ) : (
-                        <span>{agreementData.employerEmail}</span>
+                        <span>{agreementData.employerEmail || '—'}</span>
                       )}
                     </td>
                   </tr>

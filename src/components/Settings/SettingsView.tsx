@@ -35,16 +35,16 @@ export const SettingsView: React.FC = () => {
   } = useApp();
 
   const [formData, setFormData] = useState<OrgSettings>({
-    orgName: orgSettings.orgName || 'Lớp Ôn Thi HSGQG Sinh Học',
-    location: orgSettings.location || 'Hà Nội',
-    managerTitle: orgSettings.managerTitle || 'ĐẠI DIỆN LỚP',
-    managerName: orgSettings.managerName || 'Đại Diện Lớp',
-    contactPhone: orgSettings.contactPhone || '0912 345 678',
-    contactEmail: orgSettings.contactEmail || 'hsgqg.sinhhoc@gmail.com',
-    currencySymbol: orgSettings.currencySymbol || 'VNĐ',
-    defaultWorkingDaysInMonth: orgSettings.defaultWorkingDaysInMonth || 26,
-    financeTitle: 'Đại Diện Lớp',
-    financeName: 'Đại Diện Lớp',
+    orgName: orgSettings.orgName ?? '',
+    location: orgSettings.location ?? '',
+    managerTitle: orgSettings.managerTitle ?? '',
+    managerName: orgSettings.managerName ?? '',
+    contactPhone: orgSettings.contactPhone ?? '',
+    contactEmail: orgSettings.contactEmail ?? '',
+    currencySymbol: orgSettings.currencySymbol ?? '',
+    defaultWorkingDaysInMonth: orgSettings.defaultWorkingDaysInMonth ?? 26,
+    financeTitle: orgSettings.financeTitle ?? '',
+    financeName: orgSettings.financeName ?? '',
     showSignatures: false,
   });
 
@@ -54,16 +54,16 @@ export const SettingsView: React.FC = () => {
 
   React.useEffect(() => {
     setFormData({
-      orgName: orgSettings.orgName || 'Lớp Ôn Thi HSGQG Sinh Học',
-      location: orgSettings.location || 'Hà Nội',
-      managerTitle: orgSettings.managerTitle || 'ĐẠI DIỆN LỚP',
-      managerName: orgSettings.managerName || 'Đại Diện Lớp',
-      contactPhone: orgSettings.contactPhone || '0912 345 678',
-      contactEmail: orgSettings.contactEmail || 'hsgqg.sinhhoc@gmail.com',
-      currencySymbol: orgSettings.currencySymbol || 'VNĐ',
-      defaultWorkingDaysInMonth: orgSettings.defaultWorkingDaysInMonth || 26,
-      financeTitle: 'Đại Diện Lớp',
-      financeName: 'Đại Diện Lớp',
+      orgName: orgSettings.orgName ?? '',
+      location: orgSettings.location ?? '',
+      managerTitle: orgSettings.managerTitle ?? '',
+      managerName: orgSettings.managerName ?? '',
+      contactPhone: orgSettings.contactPhone ?? '',
+      contactEmail: orgSettings.contactEmail ?? '',
+      currencySymbol: orgSettings.currencySymbol ?? '',
+      defaultWorkingDaysInMonth: orgSettings.defaultWorkingDaysInMonth ?? 26,
+      financeTitle: orgSettings.financeTitle ?? '',
+      financeName: orgSettings.financeName ?? '',
       showSignatures: false,
     });
   }, [orgSettings]);
@@ -140,7 +140,6 @@ export const SettingsView: React.FC = () => {
                   onChange={e => setFormData({ ...formData, orgName: e.target.value })}
                   className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-xs sm:text-sm font-bold text-slate-900 focus:ring-1 focus:ring-slate-900 focus:outline-none"
                   placeholder="VD: Lớp Ôn Thi HSGQG Sinh Học"
-                  required
                 />
                 <p className="text-[11px] text-slate-400 mt-1">
                   Hiển thị ở tiêu đề phiếu lương, bảng thống nhất công việc và thông báo
@@ -158,7 +157,6 @@ export const SettingsView: React.FC = () => {
                   onChange={e => setFormData({ ...formData, location: e.target.value })}
                   className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-xs sm:text-sm font-medium text-slate-800 focus:ring-1 focus:ring-slate-900 focus:outline-none"
                   placeholder="VD: Hà Nội"
-                  required
                 />
                 <p className="text-[11px] text-slate-400 mt-1">
                   Hiển thị trên phần địa danh ký tá (VD: Hà Nội, ngày...)
@@ -185,7 +183,6 @@ export const SettingsView: React.FC = () => {
                   onChange={e => setFormData({ ...formData, managerTitle: e.target.value })}
                   className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-xs sm:text-sm font-bold text-slate-900 focus:ring-1 focus:ring-slate-900 focus:outline-none"
                   placeholder="VD: ĐẠI DIỆN LỚP hoặc PHỤ TRÁCH LỚP"
-                  required
                 />
               </div>
 
@@ -199,7 +196,6 @@ export const SettingsView: React.FC = () => {
                   onChange={e => setFormData({ ...formData, managerName: e.target.value })}
                   className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-xs sm:text-sm font-bold text-slate-900 focus:ring-1 focus:ring-slate-900 focus:outline-none"
                   placeholder="VD: Đại Diện Lớp"
-                  required
                 />
               </div>
 
@@ -251,7 +247,6 @@ export const SettingsView: React.FC = () => {
                   onChange={e => setFormData({ ...formData, currencySymbol: e.target.value })}
                   className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-xs sm:text-sm font-bold text-slate-900 focus:ring-1 focus:ring-slate-900 focus:outline-none"
                   placeholder="VNĐ hoặc đ"
-                  required
                 />
               </div>
 
@@ -264,10 +259,10 @@ export const SettingsView: React.FC = () => {
                   type="number"
                   min="1"
                   max="31"
-                  value={formData.defaultWorkingDaysInMonth}
-                  onChange={e => setFormData({ ...formData, defaultWorkingDaysInMonth: Number(e.target.value) || 26 })}
+                  value={formData.defaultWorkingDaysInMonth || ''}
+                  onChange={e => setFormData({ ...formData, defaultWorkingDaysInMonth: e.target.value ? Number(e.target.value) : 26 })}
                   className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-xs sm:text-sm font-bold text-slate-900 focus:ring-1 focus:ring-slate-900 focus:outline-none font-mono"
-                  required
+                  placeholder="26"
                 />
                 <p className="text-[11px] text-slate-400 mt-1">
                   Mặc định là 26 ngày công / tháng (áp dụng cho trợ lý/nhân sự cố định)
