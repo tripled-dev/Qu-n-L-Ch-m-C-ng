@@ -1,6 +1,6 @@
 {
   "name": "Remix Quản Lý Lương \u0026 Chấm Công Triple D",
-  "description": "Hệ thống quản lý lương, chấm công theo ca/ngày/sản phẩm, đánh giá KPI theo bảng kiểm trọng số và xuất phiếu lương chuẩn Triple D",
+  "description": "Hệ thống quản lý thù lao, chấm công và theo dõi chất lượng theo bảng kiểm cho Lớp Ôn Thi HSGQG Sinh Học • Đại Diện Lớp",
   "requestFramePermissions": [],
   "majorCapabilities": [
     "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"

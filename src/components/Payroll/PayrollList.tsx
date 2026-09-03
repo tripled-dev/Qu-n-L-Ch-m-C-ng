@@ -183,7 +183,7 @@ export const PayrollList: React.FC = () => {
             {monthlyStats.averageKpi}%
           </div>
           <p className="text-xs text-slate-500 mt-1">
-            Đánh giá theo 5 bộ Bảng Kiểm Trọng Số Triple D
+            Đánh giá theo 5 bộ Bảng Kiểm Trọng Số chuyên môn
           </p>
         </div>
 
@@ -207,6 +207,7 @@ export const PayrollList: React.FC = () => {
               <option value="day_hoc">Bộ phận Dạy Học</option>
               <option value="tro_giang">Bộ phận Trợ Giảng</option>
               <option value="cham_thi">Bộ phận Chấm Thi</option>
+              <option value="soan_de">Bộ phận Soạn Đề Thi</option>
               <option value="tro_ly">Bộ phận Trợ Lý</option>
               <option value="dieu_hanh">Ban Điều Hành</option>
             </select>
@@ -286,7 +287,7 @@ export const PayrollList: React.FC = () => {
               Bảng Tổng Hợp Lương Tháng {formatMonthDisplay(currentMonth)}
             </h3>
             <p className="text-xs text-slate-500">
-              Danh sách phiếu lương chi tiết của nhân sự Triple D
+              Danh sách phiếu thù lao chi tiết của người hỗ trợ lớp học
             </p>
           </div>
           <span className="text-xs font-bold text-slate-600 bg-slate-200/80 px-2.5 py-1 rounded-full">
@@ -481,7 +482,7 @@ export const PayrollList: React.FC = () => {
                           <button
                             onClick={() => setActiveSlip(slip)}
                             className="p-1 text-slate-700 hover:text-slate-900 hover:bg-slate-100 rounded transition-colors cursor-pointer"
-                            title="Xem & Xuất phiếu lương chuẩn Triple D"
+                            title="Xem & Xuất phiếu thù lao chi tiết"
                           >
                             <FileText className="w-3.5 h-3.5" />
                           </button>

@@ -1,8 +1,23 @@
 import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
 import { OrgSettings } from '../../types';
-import { Settings, Save, RotateCcw, Download, Upload, ShieldCheck, FileCheck, Trash2, Image as ImageIcon, FileSpreadsheet, ArrowRight, ShieldAlert } from 'lucide-react';
-import { ManagerSignatureSvg, FinanceSignatureSvg } from '../../utils/signatures';
+import { 
+  Settings, 
+  Save, 
+  RotateCcw, 
+  Download, 
+  Upload, 
+  FileCheck, 
+  Trash2, 
+  ShieldAlert, 
+  Building2, 
+  UserCheck, 
+  CalendarDays, 
+  Coins, 
+  Phone, 
+  Mail, 
+  MapPin 
+} from 'lucide-react';
 import { ClearSheetDataModal } from '../Common/ClearSheetDataModal';
 
 export const SettingsView: React.FC = () => {
@@ -15,49 +30,56 @@ export const SettingsView: React.FC = () => {
     clearAllSampleData,
     wipeGoogleSheetAndLocalData,
     googleSheetUrl,
-    setActiveTab,
     showConfirm,
     showToast,
   } = useApp();
-  const [formData, setFormData] = useState<OrgSettings>({ ...orgSettings });
+
+  const [formData, setFormData] = useState<OrgSettings>({
+    orgName: orgSettings.orgName || 'Lớp Ôn Thi HSGQG Sinh Học',
+    location: orgSettings.location || 'Hà Nội',
+    managerTitle: orgSettings.managerTitle || 'ĐẠI DIỆN LỚP',
+    managerName: orgSettings.managerName || 'Đại Diện Lớp',
+    contactPhone: orgSettings.contactPhone || '0912 345 678',
+    contactEmail: orgSettings.contactEmail || 'hsgqg.sinhhoc@gmail.com',
+    currencySymbol: orgSettings.currencySymbol || 'VNĐ',
+    defaultWorkingDaysInMonth: orgSettings.defaultWorkingDaysInMonth || 26,
+    financeTitle: 'Đại Diện Lớp',
+    financeName: 'Đại Diện Lớp',
+    showSignatures: false,
+  });
+
   const [saved, setSaved] = useState(false);
   const [showClearSheetModal, setShowClearSheetModal] = useState(false);
-  const managerImgInputRef = React.useRef<HTMLInputElement>(null);
-  const financeImgInputRef = React.useRef<HTMLInputElement>(null);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   React.useEffect(() => {
-    setFormData({ ...orgSettings });
+    setFormData({
+      orgName: orgSettings.orgName || 'Lớp Ôn Thi HSGQG Sinh Học',
+      location: orgSettings.location || 'Hà Nội',
+      managerTitle: orgSettings.managerTitle || 'ĐẠI DIỆN LỚP',
+      managerName: orgSettings.managerName || 'Đại Diện Lớp',
+      contactPhone: orgSettings.contactPhone || '0912 345 678',
+      contactEmail: orgSettings.contactEmail || 'hsgqg.sinhhoc@gmail.com',
+      currencySymbol: orgSettings.currencySymbol || 'VNĐ',
+      defaultWorkingDaysInMonth: orgSettings.defaultWorkingDaysInMonth || 26,
+      financeTitle: 'Đại Diện Lớp',
+      financeName: 'Đại Diện Lớp',
+      showSignatures: false,
+    });
   }, [orgSettings]);
 
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
-    updateOrgSettings(formData);
+    updateOrgSettings({
+      ...formData,
+      financeTitle: formData.managerTitle,
+      financeName: formData.managerName,
+      showSignatures: false,
+    });
     setSaved(true);
-    showToast('Đã lưu cấu hình đơn vị & chữ ký thành công!', 'success');
+    showToast('Đã lưu cấu hình thông tin thành công!', 'success');
     setTimeout(() => setSaved(false), 3000);
   };
-
-  const handleSignatureImageUpload = (
-    e: React.ChangeEvent<HTMLInputElement>,
-    field: 'managerSignatureImg' | 'financeSignatureImg'
-  ) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      if (file.size > 2 * 1024 * 1024) {
-        showToast('Vui lòng chọn ảnh dung lượng dưới 2MB', 'warning');
-        return;
-      }
-      const reader = new FileReader();
-      reader.onload = event => {
-        const base64 = event.target?.result as string;
-        setFormData(prev => ({ ...prev, [field]: base64 }));
-        showToast('Đã tải ảnh chữ ký thành công!', 'success');
-        e.target.value = ''; // Reset value to allow uploading the same image again if deleted
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-  const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -82,268 +104,179 @@ export const SettingsView: React.FC = () => {
   return (
     <div className="max-w-4xl mx-auto space-y-6">
       
-      <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-xs">
+      {/* Main Settings Form */}
+      <div className="bg-white rounded-xl border border-slate-200 p-5 sm:p-6 shadow-xs">
         <div className="flex items-center gap-3 mb-6 pb-4 border-b border-slate-200">
-          <div className="w-10 h-10 rounded-xl bg-slate-900 text-white flex items-center justify-center">
+          <div className="w-10 h-10 rounded-xl bg-slate-900 text-white flex items-center justify-center shrink-0">
             <Settings className="w-5 h-5" />
           </div>
           <div>
-            <h3 className="font-bold text-lg text-slate-900">
-              Cấu Hình Tổ Chức & Chữ Ký Phê Duyệt
+            <h3 className="font-bold text-base sm:text-lg text-slate-900">
+              Cấu Hình Tổ Chức & Thông Tin Đại Diện
             </h3>
             <p className="text-xs text-slate-500">
-              Thiết lập thông tin trung tâm, người ký duyệt trên phiếu lương và thông báo
+              Thiết lập thông tin lớp học, người phụ trách trao đổi/chi trả và quy chuẩn chấm công
             </p>
           </div>
         </div>
 
         <form onSubmit={handleSave} className="space-y-6">
           
-          {/* Org Name */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1">
-                Tên Tổ Chức / Trung Tâm:
-              </label>
-              <input
-                type="text"
-                value={formData.orgName}
-                onChange={e => setFormData({ ...formData, orgName: e.target.value })}
-                className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm font-bold"
-                required
-              />
+          {/* Section 1: Thông tin Lớp Học */}
+          <div className="space-y-3">
+            <div className="flex items-center gap-2 text-xs font-bold text-slate-900 uppercase tracking-wide">
+              <Building2 className="w-4 h-4 text-slate-700" />
+              <span>1. Thông Tin Lớp Học & Địa Điểm</span>
             </div>
-            <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1">
-                Địa Điểm Ban Hành:
-              </label>
-              <input
-                type="text"
-                value={formData.location}
-                onChange={e => setFormData({ ...formData, location: e.target.value })}
-                className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm font-medium"
-                required
-              />
-            </div>
-          </div>
 
-          {/* Signatures Configuration */}
-          <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-4">
-            <div className="flex items-center justify-between">
-              <span className="text-sm font-bold text-slate-900">
-                Thông Tin Ký Duyệt Trên Phiếu Lương
-              </span>
-              <label className="flex items-center gap-2 cursor-pointer">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-slate-50 p-4 rounded-xl border border-slate-200">
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">
+                  Tên Lớp Học / Tổ Chức:
+                </label>
                 <input
-                  type="checkbox"
-                  checked={formData.showSignatures}
-                  onChange={e => setFormData({ ...formData, showSignatures: e.target.checked })}
-                  className="rounded text-slate-900 focus:ring-slate-900 w-4 h-4"
+                  type="text"
+                  value={formData.orgName}
+                  onChange={e => setFormData({ ...formData, orgName: e.target.value })}
+                  className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-xs sm:text-sm font-bold text-slate-900 focus:ring-1 focus:ring-slate-900 focus:outline-none"
+                  placeholder="VD: Lớp Ôn Thi HSGQG Sinh Học"
+                  required
                 />
-                <span className="text-xs font-semibold text-slate-700">
-                  Hiển thị chữ ký điện tử
-                </span>
-              </label>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-              
-              {/* Manager */}
-              <div className="bg-white p-4 rounded-lg border border-slate-200 space-y-3">
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">
-                    Chức Danh Người Điều Hành:
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.managerTitle}
-                    onChange={e => setFormData({ ...formData, managerTitle: e.target.value })}
-                    className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm font-bold"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">
-                    Họ và Tên Người Điều Hành:
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.managerName}
-                    onChange={e => setFormData({ ...formData, managerName: e.target.value })}
-                    className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm font-bold"
-                  />
-                </div>
-                
-                {formData.showSignatures && (
-                  <div className="pt-3 border-t border-slate-100 space-y-2">
-                    <label className="block text-xs font-bold text-slate-700">
-                      Hình Ảnh Chữ Ký Người Điều Hành:
-                    </label>
-
-                    <div className="bg-slate-50 border border-slate-200 rounded-lg p-3 flex flex-col items-center justify-center min-h-[90px]">
-                      {formData.managerSignatureImg && formData.managerSignatureImg !== 'none' ? (
-                        <img
-                          src={formData.managerSignatureImg}
-                          alt="Chữ ký người điều hành"
-                          className="max-h-16 max-w-full object-contain"
-                        />
-                      ) : formData.managerSignatureImg === 'none' ? (
-                        <div className="text-xs italic text-amber-700 font-semibold bg-amber-50 px-3 py-1 rounded-md border border-amber-200">
-                          (Đã xóa / Không hiển thị chữ ký này)
-                        </div>
-                      ) : (
-                        <div className="flex flex-col items-center">
-                          <span className="text-[11px] text-slate-400 mb-1">Chữ ký mẫu mặc định:</span>
-                          <ManagerSignatureSvg className="w-36 h-14" />
-                        </div>
-                      )}
-                    </div>
-
-                    <input
-                      type="file"
-                      ref={managerImgInputRef}
-                      onChange={e => handleSignatureImageUpload(e, 'managerSignatureImg')}
-                      accept="image/*"
-                      className="hidden"
-                    />
-
-                    <div className="flex items-center gap-1.5 flex-wrap">
-                      <button
-                        type="button"
-                        onClick={() => managerImgInputRef.current?.click()}
-                        className="flex-1 flex items-center justify-center gap-1.5 px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-md text-xs font-bold transition-colors cursor-pointer"
-                      >
-                        <Upload className="w-3.5 h-3.5 text-slate-600" />
-                        <span>Up Ảnh Chữ Ký</span>
-                      </button>
-
-                      {formData.managerSignatureImg !== 'none' && (
-                        <button
-                          type="button"
-                          onClick={() => setFormData(prev => ({ ...prev, managerSignatureImg: 'none' }))}
-                          className="flex items-center justify-center gap-1 px-2.5 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 rounded-md text-xs font-bold transition-colors cursor-pointer"
-                          title="Xóa chữ ký (không hiển thị hình chữ ký)"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                          <span>Xóa</span>
-                        </button>
-                      )}
-
-                      {formData.managerSignatureImg !== undefined && (
-                        <button
-                          type="button"
-                          onClick={() => setFormData(prev => ({ ...prev, managerSignatureImg: undefined }))}
-                          className="flex items-center justify-center gap-1 px-2 py-1.5 bg-slate-50 hover:bg-slate-100 text-slate-600 rounded-md text-xs font-semibold cursor-pointer"
-                          title="Khôi phục về chữ ký mẫu mặc định"
-                        >
-                          <RotateCcw className="w-3 h-3" />
-                          <span>Dùng Mẫu</span>
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                )}
+                <p className="text-[11px] text-slate-400 mt-1">
+                  Hiển thị ở tiêu đề phiếu lương, bảng thống nhất công việc và thông báo
+                </p>
               </div>
 
-              {/* Finance */}
-              <div className="bg-white p-4 rounded-lg border border-slate-200 space-y-3">
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">
-                    Chức Danh Ban Kinh Tế / Kế Toán:
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.financeTitle}
-                    onChange={e => setFormData({ ...formData, financeTitle: e.target.value })}
-                    className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm font-bold"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">
-                    Họ và Tên Phụ Trách Kinh Tế:
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.financeName}
-                    onChange={e => setFormData({ ...formData, financeName: e.target.value })}
-                    className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm font-bold"
-                  />
-                </div>
-
-                {formData.showSignatures && (
-                  <div className="pt-3 border-t border-slate-100 space-y-2">
-                    <label className="block text-xs font-bold text-slate-700">
-                      Hình Ảnh Chữ Ký Phụ Trách Kinh Tế:
-                    </label>
-
-                    <div className="bg-slate-50 border border-slate-200 rounded-lg p-3 flex flex-col items-center justify-center min-h-[90px]">
-                      {formData.financeSignatureImg && formData.financeSignatureImg !== 'none' ? (
-                        <img
-                          src={formData.financeSignatureImg}
-                          alt="Chữ ký phụ trách kinh tế"
-                          className="max-h-16 max-w-full object-contain"
-                        />
-                      ) : formData.financeSignatureImg === 'none' ? (
-                        <div className="text-xs italic text-amber-700 font-semibold bg-amber-50 px-3 py-1 rounded-md border border-amber-200">
-                          (Đã xóa / Không hiển thị chữ ký này)
-                        </div>
-                      ) : (
-                        <div className="flex flex-col items-center">
-                          <span className="text-[11px] text-slate-400 mb-1">Chữ ký mẫu mặc định:</span>
-                          <FinanceSignatureSvg className="w-36 h-14" />
-                        </div>
-                      )}
-                    </div>
-
-                    <input
-                      type="file"
-                      ref={financeImgInputRef}
-                      onChange={e => handleSignatureImageUpload(e, 'financeSignatureImg')}
-                      accept="image/*"
-                      className="hidden"
-                    />
-
-                    <div className="flex items-center gap-1.5 flex-wrap">
-                      <button
-                        type="button"
-                        onClick={() => financeImgInputRef.current?.click()}
-                        className="flex-1 flex items-center justify-center gap-1.5 px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-md text-xs font-bold transition-colors cursor-pointer"
-                      >
-                        <Upload className="w-3.5 h-3.5 text-slate-600" />
-                        <span>Up Ảnh Chữ Ký</span>
-                      </button>
-
-                      {formData.financeSignatureImg !== 'none' && (
-                        <button
-                          type="button"
-                          onClick={() => setFormData(prev => ({ ...prev, financeSignatureImg: 'none' }))}
-                          className="flex items-center justify-center gap-1 px-2.5 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 rounded-md text-xs font-bold transition-colors cursor-pointer"
-                          title="Xóa chữ ký (không hiển thị hình chữ ký)"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                          <span>Xóa</span>
-                        </button>
-                      )}
-
-                      {formData.financeSignatureImg !== undefined && (
-                        <button
-                          type="button"
-                          onClick={() => setFormData(prev => ({ ...prev, financeSignatureImg: undefined }))}
-                          className="flex items-center justify-center gap-1 px-2 py-1.5 bg-slate-50 hover:bg-slate-100 text-slate-600 rounded-md text-xs font-semibold cursor-pointer"
-                          title="Khôi phục về chữ ký mẫu mặc định"
-                        >
-                          <RotateCcw className="w-3 h-3" />
-                          <span>Dùng Mẫu</span>
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                )}
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1 flex items-center gap-1">
+                  <MapPin className="w-3.5 h-3.5 text-slate-400" />
+                  <span>Địa Điểm Ban Hành:</span>
+                </label>
+                <input
+                  type="text"
+                  value={formData.location}
+                  onChange={e => setFormData({ ...formData, location: e.target.value })}
+                  className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-xs sm:text-sm font-medium text-slate-800 focus:ring-1 focus:ring-slate-900 focus:outline-none"
+                  placeholder="VD: Hà Nội"
+                  required
+                />
+                <p className="text-[11px] text-slate-400 mt-1">
+                  Hiển thị trên phần địa danh ký tá (VD: Hà Nội, ngày...)
+                </p>
               </div>
-
             </div>
           </div>
 
-          {/* Actions */}
+          {/* Section 2: Người Đại Diện & Chi Trả */}
+          <div className="space-y-3">
+            <div className="flex items-center gap-2 text-xs font-bold text-slate-900 uppercase tracking-wide">
+              <UserCheck className="w-4 h-4 text-teal-700" />
+              <span>2. Người Đại Diện Lớp / Phụ Trách Giao Việc & Chi Trả</span>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-slate-50 p-4 rounded-xl border border-slate-200">
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">
+                  Chức Danh / Danh Xưng Đại Diện:
+                </label>
+                <input
+                  type="text"
+                  value={formData.managerTitle}
+                  onChange={e => setFormData({ ...formData, managerTitle: e.target.value })}
+                  className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-xs sm:text-sm font-bold text-slate-900 focus:ring-1 focus:ring-slate-900 focus:outline-none"
+                  placeholder="VD: ĐẠI DIỆN LỚP hoặc PHỤ TRÁCH LỚP"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">
+                  Họ và Tên Người Đại Diện:
+                </label>
+                <input
+                  type="text"
+                  value={formData.managerName}
+                  onChange={e => setFormData({ ...formData, managerName: e.target.value })}
+                  className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-xs sm:text-sm font-bold text-slate-900 focus:ring-1 focus:ring-slate-900 focus:outline-none"
+                  placeholder="VD: Đại Diện Lớp"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1 flex items-center gap-1">
+                  <Phone className="w-3.5 h-3.5 text-slate-400" />
+                  <span>Điện Thoại / Zalo Liên Hệ:</span>
+                </label>
+                <input
+                  type="text"
+                  value={formData.contactPhone || ''}
+                  onChange={e => setFormData({ ...formData, contactPhone: e.target.value })}
+                  className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-xs sm:text-sm text-slate-800 focus:ring-1 focus:ring-slate-900 focus:outline-none font-mono"
+                  placeholder="VD: 0912 345 678"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1 flex items-center gap-1">
+                  <Mail className="w-3.5 h-3.5 text-slate-400" />
+                  <span>Email Liên Hệ:</span>
+                </label>
+                <input
+                  type="email"
+                  value={formData.contactEmail || ''}
+                  onChange={e => setFormData({ ...formData, contactEmail: e.target.value })}
+                  className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-xs sm:text-sm text-slate-800 focus:ring-1 focus:ring-slate-900 focus:outline-none"
+                  placeholder="VD: hsgqg.sinhhoc@gmail.com"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Section 3: Quy Chuẩn Tính Lương & Chấm Công */}
+          <div className="space-y-3">
+            <div className="flex items-center gap-2 text-xs font-bold text-slate-900 uppercase tracking-wide">
+              <Coins className="w-4 h-4 text-amber-600" />
+              <span>3. Quy Chuẩn Tính Công & Tiền Tệ</span>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-slate-50 p-4 rounded-xl border border-slate-200">
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">
+                  Đơn Vị Tiền Tệ:
+                </label>
+                <input
+                  type="text"
+                  value={formData.currencySymbol}
+                  onChange={e => setFormData({ ...formData, currencySymbol: e.target.value })}
+                  className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-xs sm:text-sm font-bold text-slate-900 focus:ring-1 focus:ring-slate-900 focus:outline-none"
+                  placeholder="VNĐ hoặc đ"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1 flex items-center gap-1">
+                  <CalendarDays className="w-3.5 h-3.5 text-slate-400" />
+                  <span>Số Ngày Công Tiêu Chuẩn / Tháng:</span>
+                </label>
+                <input
+                  type="number"
+                  min="1"
+                  max="31"
+                  value={formData.defaultWorkingDaysInMonth}
+                  onChange={e => setFormData({ ...formData, defaultWorkingDaysInMonth: Number(e.target.value) || 26 })}
+                  className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-xs sm:text-sm font-bold text-slate-900 focus:ring-1 focus:ring-slate-900 focus:outline-none font-mono"
+                  required
+                />
+                <p className="text-[11px] text-slate-400 mt-1">
+                  Mặc định là 26 ngày công / tháng (áp dụng cho trợ lý/nhân sự cố định)
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Actions Bar */}
           <div className="flex items-center justify-between pt-4 border-t border-slate-200">
             {saved ? (
               <span className="text-xs font-bold text-emerald-600 flex items-center gap-1">
@@ -353,7 +286,7 @@ export const SettingsView: React.FC = () => {
 
             <button
               type="submit"
-              className="flex items-center gap-2 px-6 py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-bold text-sm rounded-lg shadow-sm cursor-pointer"
+              className="flex items-center gap-2 px-6 py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs sm:text-sm rounded-lg shadow-sm cursor-pointer transition-colors"
             >
               <Save className="w-4 h-4 text-amber-300" />
               <span>Lưu Cấu Hình</span>
@@ -364,19 +297,19 @@ export const SettingsView: React.FC = () => {
       </div>
 
       {/* Backup & System Reset Card */}
-      <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-xs">
-        <h4 className="font-bold text-base text-slate-900 mb-2">
-          Sao Lưu & Quản Lý Dữ Liệu
+      <div className="bg-white rounded-xl border border-slate-200 p-5 sm:p-6 shadow-xs">
+        <h4 className="font-bold text-base text-slate-900 mb-1">
+          Sao Lưu & Quản Trị Dữ Liệu
         </h4>
         <p className="text-xs text-slate-500 mb-4">
-          Bạn có thể xuất file sao lưu JSON, khôi phục từ file hoặc xóa dữ liệu mẫu để sẵn sàng tải dữ liệu từ Google Sheet.
+          Bạn có thể xuất bản sao lưu JSON, nạp lại dữ liệu hoặc xóa sạch dữ liệu mẫu để sẵn sàng đồng bộ Google Sheet.
         </p>
 
-        <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+        <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5">
           <button
             type="button"
             onClick={exportBackupJson}
-            className="flex items-center justify-center gap-1.5 px-2.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold rounded-lg transition-colors cursor-pointer whitespace-nowrap"
+            className="flex items-center justify-center gap-1.5 px-2.5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold rounded-lg transition-colors cursor-pointer whitespace-nowrap"
             title="Tải bản sao lưu JSON về máy"
           >
             <Download className="w-3.5 h-3.5 text-slate-600 shrink-0" />
@@ -386,7 +319,7 @@ export const SettingsView: React.FC = () => {
           <button
             type="button"
             onClick={() => fileInputRef.current?.click()}
-            className="flex items-center justify-center gap-1.5 px-2.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold rounded-lg transition-colors cursor-pointer whitespace-nowrap"
+            className="flex items-center justify-center gap-1.5 px-2.5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold rounded-lg transition-colors cursor-pointer whitespace-nowrap"
             title="Khôi phục dữ liệu từ file JSON"
           >
             <Upload className="w-3.5 h-3.5 text-slate-600 shrink-0" />
@@ -403,7 +336,7 @@ export const SettingsView: React.FC = () => {
           <button
             type="button"
             onClick={() => setShowClearSheetModal(true)}
-            className="flex items-center justify-center gap-1.5 px-2.5 py-2 bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold rounded-lg transition-colors cursor-pointer shadow-xs shadow-rose-600/20 whitespace-nowrap"
+            className="flex items-center justify-center gap-1.5 px-2.5 py-2.5 bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold rounded-lg transition-colors cursor-pointer shadow-xs shadow-rose-600/20 whitespace-nowrap"
             title="Xóa hết dữ liệu trên Google Sheet (Cần mật khẩu)"
           >
             <ShieldAlert className="w-3.5 h-3.5 text-white shrink-0" />
@@ -425,7 +358,7 @@ export const SettingsView: React.FC = () => {
                 },
               });
             }}
-            className="flex items-center justify-center gap-1.5 px-2.5 py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-bold rounded-lg transition-colors cursor-pointer whitespace-nowrap"
+            className="flex items-center justify-center gap-1.5 px-2.5 py-2.5 bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-bold rounded-lg transition-colors cursor-pointer whitespace-nowrap"
             title="Xóa bộ nhớ tạm trên trình duyệt"
           >
             <Trash2 className="w-3.5 h-3.5 text-rose-600 shrink-0" />
@@ -437,7 +370,7 @@ export const SettingsView: React.FC = () => {
             onClick={() => {
               showConfirm({
                 title: 'Khôi phục dữ liệu mẫu ban đầu',
-                message: 'Thao tác này sẽ đặt lại hệ thống về trạng thái mẫu ban đầu của Triple D. Bạn có muốn tiếp tục?',
+                message: 'Thao tác này sẽ đặt lại hệ thống về trạng thái mẫu ban đầu của các lớp học. Bạn có muốn tiếp tục?',
                 confirmText: 'Khôi phục mẫu',
                 variant: 'warning',
                 onConfirm: () => {
@@ -446,7 +379,7 @@ export const SettingsView: React.FC = () => {
                 },
               });
             }}
-            className="flex items-center justify-center gap-1.5 px-2.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-lg transition-colors cursor-pointer whitespace-nowrap col-span-2 sm:col-span-1"
+            className="flex items-center justify-center gap-1.5 px-2.5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-lg transition-colors cursor-pointer whitespace-nowrap col-span-2 sm:col-span-1"
             title="Khôi phục lại dữ liệu mẫu ban đầu"
           >
             <RotateCcw className="w-3.5 h-3.5 text-slate-500 shrink-0" />

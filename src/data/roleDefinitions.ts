@@ -9,9 +9,9 @@ export const STAFF_ROLE_DEFINITIONS: Record<StaffRoleType, StaffRoleMeta> = {
     departmentId: 'day_hoc',
     departmentName: 'Dạy Học',
     division: 'CHUYEN_MON',
-    defaultChecklistIds: ['chk_day_hoc', 'chk_soan_bai'],
+    defaultChecklistIds: ['chk_day_hoc'],
     defaultChecklistId: 'chk_day_hoc',
-    defaultChecklistName: 'Bảng Kiểm Dạy Học & Soạn Bài',
+    defaultChecklistName: 'Bảng Kiểm Dạy Học',
     description: 'Phụ trách giảng dạy trực tiếp, chuẩn bị bài giảng trước ≥ 2 ngày, tương tác giải đáp và quản lý video record.',
     defaultBaseRate: 70000,
     badgeBg: 'bg-blue-50 text-blue-700',
@@ -60,14 +60,31 @@ export const STAFF_ROLE_DEFINITIONS: Record<StaffRoleType, StaffRoleMeta> = {
     departmentId: 'tro_ly',
     departmentName: 'Trợ Lý',
     division: 'HAU_CAN',
-    defaultChecklistIds: ['chk_tro_ly', 'chk_soan_bai'],
+    defaultChecklistIds: ['chk_tro_ly'],
     defaultChecklistId: 'chk_tro_ly',
-    defaultChecklistName: 'Bảng Kiểm Trợ Lý & Soạn Bài',
-    description: 'Hỗ trợ công tác học vụ, theo dõi ca trực ngày công và điều phối công việc chung của Triple D.',
+    defaultChecklistName: 'Bảng Kiểm Trợ Lý',
+    description: 'Hỗ trợ công tác học vụ, theo dõi ca trực ngày công và hỗ trợ quản lý các lớp học của Đại Diện Lớp.',
     defaultBaseRate: 70000,
     badgeBg: 'bg-amber-50 text-amber-800',
     badgeText: 'text-amber-800',
     badgeBorder: 'border-amber-200',
+  },
+  soan_de_thi: {
+    id: 'soan_de_thi',
+    title: 'Soạn Đề Thi',
+    shortTitle: 'Soạn đề thi',
+    shortCode: 'SĐT',
+    departmentId: 'soan_de',
+    departmentName: 'Soạn Đề Thi',
+    division: 'CHUYEN_MON',
+    defaultChecklistIds: ['chk_soan_bai'],
+    defaultChecklistId: 'chk_soan_bai',
+    defaultChecklistName: 'Bảng Kiểm Soạn Bài',
+    description: 'Biên soạn ngân hàng câu hỏi, ma trận đề thi, đề thi thử và đáp án, lời giải chi tiết theo chuẩn chất lượng của lớp học.',
+    defaultBaseRate: 150000,
+    badgeBg: 'bg-violet-50 text-violet-700',
+    badgeText: 'text-violet-700',
+    badgeBorder: 'border-violet-200',
   },
 };
 
@@ -147,29 +164,47 @@ export function getStaffDutyRates(staff: Staff): StaffDutiesRates {
 }
 
 /**
- * Lấy danh sách tất cả các bảng kiểm được giao của nhân sự (chuẩn theo vai trò đảm nhiệm)
+ * Lấy danh sách tất cả các bảng kiểm được giao của nhân sự (chuẩn theo vai trò và công việc đảm nhiệm)
  */
 export function getStaffAssignedChecklists(
   staff: Staff,
   checklistTemplates: ChecklistTemplate[]
 ): ChecklistTemplate[] {
-  const roles = getStaffRoles(staff).map(r => r.id);
-  const allowedChecklistIds = getRolesChecklistIds(roles);
+  // 1. Ưu tiên danh sách bảng kiểm được gán cụ thể cho nhân sự
+  const customIds = (staff.assignedChecklistIds && staff.assignedChecklistIds.length > 0)
+    ? staff.assignedChecklistIds
+    : (staff.assignedChecklistId ? [staff.assignedChecklistId] : []);
 
-  // Nếu staff có danh sách chỉ định riêng, chỉ lấy những bảng kiểm hợp lệ với role
-  if (staff.assignedChecklistIds && staff.assignedChecklistIds.length > 0) {
-    const validAssigned = staff.assignedChecklistIds.filter(id => allowedChecklistIds.includes(id));
-    if (validAssigned.length > 0) {
-      return validAssigned
-        .map(id => checklistTemplates.find(t => t.id === id))
-        .filter((t): t is ChecklistTemplate => !!t);
+  if (customIds.length > 0) {
+    const valid = customIds
+      .map(id => checklistTemplates.find(t => t.id === id || t.code.toLowerCase() === id.toLowerCase()))
+      .filter((t): t is ChecklistTemplate => !!t);
+    if (valid.length > 0) {
+      return valid;
     }
   }
 
-  // Mặc định lấy toàn bộ bảng kiểm tương ứng với các role
-  return allowedChecklistIds
+  // 2. Nếu không có gán riêng, lấy theo các vai trò thực tế của nhân sự
+  const roles = getStaffRoles(staff).map(r => r.id);
+  const allowedChecklistIds = getRolesChecklistIds(roles);
+
+  const matched = allowedChecklistIds
     .map(id => checklistTemplates.find(t => t.id === id))
     .filter((t): t is ChecklistTemplate => !!t);
+
+  if (matched.length > 0) {
+    return matched;
+  }
+
+  // 3. Fallback: lấy bảng kiểm theo vai trò chính
+  const primaryRole = resolveStaffRoleType(staff);
+  const primaryMeta = STAFF_ROLE_DEFINITIONS[primaryRole];
+  if (primaryMeta?.defaultChecklistId) {
+    const fallbackChk = checklistTemplates.find(t => t.id === primaryMeta.defaultChecklistId);
+    if (fallbackChk) return [fallbackChk];
+  }
+
+  return checklistTemplates.slice(0, 1);
 }
 
 /**
@@ -194,6 +229,14 @@ export function resolveStaffRoleType(staff: Staff): StaffRoleType {
   if (staff.departmentId === 'tro_giang') return 'tro_giang';
   if (staff.departmentId === 'cham_thi') return 'cham_thi';
   if (staff.departmentId === 'tro_ly') return 'tro_ly';
+  if (staff.departmentId === 'soan_de') return 'soan_de_thi';
+
+  if (typeof staff.role === 'string') {
+    const rLower = staff.role.toLowerCase();
+    if (rLower.includes('soạn đề') || rLower.includes('soan de') || rLower.includes('đề thi') || rLower.includes('de thi')) {
+      return 'soan_de_thi';
+    }
+  }
 
   return 'giang_vien';
 }

@@ -1,4 +1,4 @@
-export type DepartmentId = 'day_hoc' | 'tro_giang' | 'cham_thi' | 'tro_ly' | 'truyen_thong' | 'khac';
+export type DepartmentId = 'day_hoc' | 'tro_giang' | 'cham_thi' | 'tro_ly' | 'soan_de' | 'truyen_thong' | 'khac';
 
 export type DivisionType = 'CHUYEN_MON' | 'HAU_CAN';
 
@@ -6,7 +6,8 @@ export type StaffRoleType =
   | 'giang_vien'    // Giảng viên chuyên môn đứng lớp
   | 'tro_giang'     // Trợ giảng học vụ & quản lý nhóm lớp
   | 'cham_thi'      // Chuyên viên chấm thi & khảo thí
-  | 'tro_ly';       // Trợ lý học vụ & hỗ trợ vận hành
+  | 'tro_ly'        // Trợ lý học vụ & hỗ trợ vận hành
+  | 'soan_de_thi';  // Soạn đề thi (chỉ sử dụng bảng kiểm soạn bài)
 
 export type BillableWorkType = 'teaching' | 'tutoring' | 'grading' | 'day_work' | 'bonus';
 
@@ -58,6 +59,8 @@ export interface Staff {
   id: string;
   code: string; // Mã NV (e.g. TD-0507)
   fullName: string;
+  citizenId?: string; // Số CCCD / Căn cước công dân
+  cccd?: string; // Đồng bộ alias
   role: string; // Chức danh hiển thị
   roleType?: StaffRoleType;
   roles?: StaffRoleType[]; // Hỗ trợ kiêm nhiệm nhiều vai trò (GV, TG, CT, TL)
@@ -239,15 +242,17 @@ export interface MonthlyPayrollSlip {
 }
 
 export interface OrgSettings {
-  orgName: string; // TRIPLE D ÔN THI HSGQG MÔN SINH HỌC
-  location: string; // Hà Nội
-  managerTitle: string; // ĐIỀU HÀNH TRIPLE D
-  managerName: string; // Đặng Tuấn Anh
+  orgName: string; // Tên Lớp Học / Tổ Chức (VD: Lớp Ôn Thi HSGQG Sinh Học)
+  location: string; // Địa Điểm (VD: Hà Nội)
+  managerTitle: string; // Chức Danh Đại Diện (VD: ĐẠI DIỆN LỚP)
+  managerName: string; // Họ và Tên Người Đại Diện (VD: Đại Diện Lớp)
+  contactPhone?: string; // Số điện thoại / Zalo liên hệ
+  contactEmail?: string; // Email liên hệ
   managerSignatureImg?: string;
-  financeTitle: string; // BAN KINH TẾ & VẬN HÀNH
-  financeName: string; // Trần Hạnh Dung
+  financeTitle?: string;
+  financeName?: string;
   financeSignatureImg?: string;
-  showSignatures: boolean;
+  showSignatures?: boolean;
   currencySymbol: string; // đ / VNĐ
   defaultWorkingDaysInMonth: number; // 26
 }

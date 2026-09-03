@@ -313,3 +313,25 @@ export function exportPayrollTableToCSV(data: any[], fileName: string) {
   link.setAttribute('download', fileName.endsWith('.csv') ? fileName : `${fileName}.csv`);
   link.click();
 }
+
+/**
+ * Ensures any historical or stale name reference is replaced with Đại Diện Lớp
+ */
+export function cleanPersonName(name?: string | null, fallback = 'Đại Diện Lớp'): string {
+  if (!name || typeof name !== 'string') return fallback;
+  const n = name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
+  if (
+    n.includes('dang tuan anh') ||
+    n.includes('tuan anh') ||
+    (n.includes('dang') && n.includes('anh')) ||
+    n === 'dang' ||
+    n === 'anh' ||
+    n.includes('triple d') ||
+    n.includes('tran hanh dung') ||
+    n.includes('hanh dung')
+  ) {
+    return fallback;
+  }
+  return name.trim();
+}
+

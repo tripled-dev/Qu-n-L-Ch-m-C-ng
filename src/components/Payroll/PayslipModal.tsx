@@ -1,15 +1,17 @@
 import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
-import { MonthlyPayrollSlip, PieceworkSalaryItem } from '../../types';
-import { getStaffAssignedChecklists } from '../../data/roleDefinitions';
+import { MonthlyPayrollSlip, PieceworkSalaryItem, StaffRoleType } from '../../types';
+import { getStaffAssignedChecklists, resolveStaffRoleType } from '../../data/roleDefinitions';
+import { ContractModal } from '../Contract/ContractModal';
 import { 
   formatVND, 
   formatMonthDisplay, 
   exportElementToPDF, 
   exportElementToPNG,
-  calculateKpiFromScores
+  calculateKpiFromScores,
+  cleanPersonName
 } from '../../utils/formatters';
-import { ManagerSignatureSvg, FinanceSignatureSvg } from '../../utils/signatures';
+import { ManagerSignatureSvg, FinanceSignatureSvg, TranHanhDungSignatureSvg } from '../../utils/signatures';
 import { 
   Printer, 
   Download, 
@@ -24,7 +26,8 @@ import {
   CheckCircle,
   Eye,
   Upload,
-  RotateCcw
+  RotateCcw,
+  FileText
 } from 'lucide-react';
 
 interface PayslipModalProps {
@@ -38,6 +41,7 @@ export const PayslipModal: React.FC<PayslipModalProps> = ({ slip, onClose }) => 
   const [editedSlip, setEditedSlip] = useState<MonthlyPayrollSlip>({ ...slip });
   const [copied, setCopied] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
+  const [showContractModal, setShowContractModal] = useState(false);
   const editManagerImgRef = React.useRef<HTMLInputElement>(null);
   const editFinanceImgRef = React.useRef<HTMLInputElement>(null);
 
@@ -157,18 +161,18 @@ export const PayslipModal: React.FC<PayslipModalProps> = ({ slip, onClose }) => 
   const handleCopySummary = () => {
     const currentStaff = staffList.find(s => s.id === editedSlip.staffId || s.code === editedSlip.staffCode);
     const bankInfo = editedSlip.bankName || currentStaff?.bankName || '';
-    const text = `📋 THÔNG BÁO PHIẾU LƯƠNG THÁNG ${formatMonthDisplay(editedSlip.month)} - TRIPLE D
-👤 Họ tên: ${editedSlip.staffName} (Mã NV: ${editedSlip.staffCode || '---'})
-🏷️ Chức danh: ${editedSlip.role}
-💳 STK: ${editedSlip.bankAccount || '---'}${bankInfo ? ` (${bankInfo})` : ''}
+    const text = `📋 BẢNG KÊ THÙ LAO THÁNG ${formatMonthDisplay(editedSlip.month)} - LỚP ÔN THI HSGQG SINH HỌC
+👤 Họ tên nhận việc: ${editedSlip.staffName} (Mã: ${editedSlip.staffCode || '---'})
+🏷️ Nội dung làm: ${editedSlip.role}
+💳 Tài khoản nhận tiền: ${editedSlip.bankAccount || '---'}${bankInfo ? ` (${bankInfo})` : ''}
 ---------------------------
-💰 Lương chính: ${formatVND(editedSlip.primarySalary.totalAmount)} đ (${editedSlip.primarySalary.daysOrSessions} ${editedSlip.primarySalary.unitName} × ${formatVND(editedSlip.primarySalary.unitPrice)} đ × KPI ${editedSlip.primarySalary.kpiPercent}% + Thưởng ${formatVND(editedSlip.primarySalary.bonus)} đ)
-${editedSlip.pieceworkItems.length > 0 ? `📦 Lương sản phẩm (LTSP): ${formatVND(editedSlip.pieceworkItems.reduce((s, i) => s + i.totalAmount, 0))} đ\n` + editedSlip.pieceworkItems.map(p => `  • ${p.workName}: ${p.quantity} ${p.unit} × ${formatVND(p.unitPrice)} đ = ${formatVND(p.totalAmount)} đ`).join('\n') : ''}
+💰 Thù lao chính: ${formatVND(editedSlip.primarySalary.totalAmount)} đ (${editedSlip.primarySalary.daysOrSessions} ${editedSlip.primarySalary.unitName} × ${formatVND(editedSlip.primarySalary.unitPrice)} đ × KPI ${editedSlip.primarySalary.kpiPercent}% + Thưởng ${formatVND(editedSlip.primarySalary.bonus)} đ)
+${editedSlip.pieceworkItems.length > 0 ? `📦 Thù lao sản phẩm: ${formatVND(editedSlip.pieceworkItems.reduce((s, i) => s + i.totalAmount, 0))} đ\n` + editedSlip.pieceworkItems.map(p => `  • ${p.workName}: ${p.quantity} ${p.unit} × ${formatVND(p.unitPrice)} đ = ${formatVND(p.totalAmount)} đ`).join('\n') : ''}
 ${editedSlip.generalBonus > 0 ? `🎁 Thưởng thêm: +${formatVND(editedSlip.generalBonus)} đ\n` : ''}
 ${editedSlip.deductions > 0 ? `⚠️ Giảm trừ: -${formatVND(editedSlip.deductions)} đ (${editedSlip.deductionReason || 'Khấu trừ'})\n` : ''}
 ---------------------------
 💵 TỔNG CỘNG THỰC NHẬN: ${formatVND(editedSlip.totalSalary)} VNĐ
-Trân trọng cảm ơn sự đồng hành và cống hiến của bạn cùng Triple D!`;
+Cảm ơn bạn đã đồng hành và hỗ trợ Lớp Ôn Thi HSGQG Sinh Học cùng Đại Diện Lớp!`;
 
     navigator.clipboard.writeText(text);
     setCopied(true);
@@ -178,6 +182,54 @@ Trân trọng cảm ơn sự đồng hành và cống hiến của bạn cùng T
   const currentData = isEditing ? editedSlip : slip;
   const currentStaff = staffList.find(s => s.id === currentData.staffId || s.code === currentData.staffCode);
   const staffBankName = currentStaff?.bankName || '';
+
+  const staffRoleType: StaffRoleType = currentStaff 
+    ? resolveStaffRoleType(currentStaff) 
+    : (currentData.role || '').toLowerCase().includes('soạn') 
+    ? 'soan_de_thi' 
+    : (currentData.role || '').toLowerCase().includes('chấm') 
+    ? 'cham_thi' 
+    : (currentData.role || '').toLowerCase().includes('trợ giảng') 
+    ? 'tro_giang' 
+    : (currentData.role || '').toLowerCase().includes('trợ lý') 
+    ? 'tro_ly' 
+    : 'giang_vien';
+
+  const isExamCrafter = staffRoleType === 'soan_de_thi' || (currentData.role || '').toLowerCase().includes('soạn');
+  const isGrader = staffRoleType === 'cham_thi' || (currentData.role || '').toLowerCase().includes('chấm');
+  const isTutor = staffRoleType === 'tro_giang' || (currentData.role || '').toLowerCase().includes('trợ giảng');
+  const isAssistant = staffRoleType === 'tro_ly' || (currentData.role || '').toLowerCase().includes('trợ lý');
+  const isTeacher = staffRoleType === 'giang_vien' || (!isExamCrafter && !isGrader && !isTutor && !isAssistant);
+
+  let defaultPrimaryName = '1. Lương dạy học';
+  let colQtyHeader = 'Buổi';
+  let colRateHeader = 'Đơn giá (Buổi)';
+
+  if (isExamCrafter || currentData.primarySalary.unitName === 'Đề') {
+    defaultPrimaryName = '1. Lương soạn đề thi';
+    colQtyHeader = 'Số đề';
+    colRateHeader = 'Đơn giá (Đề)';
+  } else if (isGrader || currentData.primarySalary.unitName === 'Bài') {
+    defaultPrimaryName = '1. Lương chấm bài / thi';
+    colQtyHeader = 'Số bài';
+    colRateHeader = 'Đơn giá (Bài)';
+  } else if (isTutor) {
+    defaultPrimaryName = '1. Lương trợ giảng';
+    colQtyHeader = 'Số buổi';
+    colRateHeader = 'Đơn giá (Buổi)';
+  } else if (isAssistant || currentData.primarySalary.unitName === 'Ngày công') {
+    defaultPrimaryName = '1. Lương ngày công (Trợ lý)';
+    colQtyHeader = 'Ngày công';
+    colRateHeader = 'Lương (ngày)';
+  } else {
+    colQtyHeader = currentData.primarySalary.unitName ? `Số lượng (${currentData.primarySalary.unitName})` : 'Buổi';
+    colRateHeader = currentData.primarySalary.unitName ? `Đơn giá (${currentData.primarySalary.unitName})` : 'Đơn giá (Buổi)';
+  }
+
+  const primaryDisplayName = (currentData.primarySalary.name && currentData.primarySalary.name !== '1. Lương gốc')
+    ? currentData.primarySalary.name
+    : defaultPrimaryName;
+
   const isTeachingType = currentData.formatType === 'teaching';
 
   const normMonth = (currentData.month || '').trim().substring(0, 7);
@@ -227,7 +279,7 @@ Trân trọng cảm ơn sự đồng hành và cống hiến của bạn cùng T
           month: normMonth,
           templateId: t.id,
           evaluationDate: new Date().toISOString().substring(0, 10),
-          evaluatorName: 'Ban kiểm duyệt',
+          evaluatorName: cleanPersonName(orgSettings?.managerName, 'Đại Diện Lớp'),
           scores: virtualScores,
           calculatedTotalKpi: calculatedKpi,
           notes: '',
@@ -341,6 +393,18 @@ Trân trọng cảm ơn sự đồng hành và cống hiến của bạn cùng T
               <span className="hidden sm:inline whitespace-nowrap">Ảnh</span>
             </button>
 
+            {/* View/Export Agreement button */}
+            {currentStaff && (
+              <button
+                onClick={() => setShowContractModal(true)}
+                className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-teal-700 hover:bg-teal-600 text-white cursor-pointer whitespace-nowrap shrink-0 border border-teal-500 shadow-xs"
+                title="Xem bản thống nhất công việc & mức thù lao"
+              >
+                <FileText className="w-3.5 h-3.5 shrink-0" />
+                <span className="hidden sm:inline whitespace-nowrap">Thống nhất việc</span>
+              </button>
+            )}
+
             {/* Copy Summary */}
             <button
               onClick={handleCopySummary}
@@ -374,8 +438,11 @@ Trân trọng cảm ơn sự đồng hành và cống hiến của bạn cùng T
             {/* Title Header */}
             <div className="text-center mb-4">
               <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-black uppercase">
-                Phiếu Lương Tháng {formatMonthDisplay(currentData.month)}
+                Bảng Kê Thù Lao Tháng {formatMonthDisplay(currentData.month)}
               </h1>
+              <p className="text-xs sm:text-sm text-slate-600 italic mt-0.5">
+                (Lớp Ôn Thi HSGQG Sinh Học • Đại Diện Lớp trực tiếp thanh toán thù lao)
+              </p>
             </div>
 
             {/* Header Info Table (Border Solid) */}
@@ -459,8 +526,8 @@ Trân trọng cảm ơn sự đồng hành và cống hiến của bạn cùng T
               </tbody>
             </table>
 
-            {/* FORMAT 1: MẪU LƯƠNG DẠY HỌC */}
-            {isTeachingType && (
+            {/* FORMAT 1: MẪU LƯƠNG GIẢNG DẠY HOẶC NHÂN SỰ ĐƠN NHIỆM (SOẠN ĐỀ, CHẤM THI) */}
+            {(isTeachingType || currentData.pieceworkItems.length === 0) && (
               <div>
                 <h4 className="font-bold text-sm sm:text-base mb-2 text-black">
                   Thành phần lương:
@@ -470,8 +537,8 @@ Trân trọng cảm ơn sự đồng hành và cống hiến của bạn cùng T
                   <thead>
                     <tr className="bg-slate-50 border-b border-black text-center font-bold">
                       <th className="border-r border-black p-2.5 w-[25%] font-bold">Thành phần</th>
-                      <th className="border-r border-black p-2.5 w-[15%] font-bold">Buổi</th>
-                      <th className="border-r border-black p-2.5 w-[20%] font-bold">Đơn giá (Buổi)</th>
+                      <th className="border-r border-black p-2.5 w-[15%] font-bold">{colQtyHeader}</th>
+                      <th className="border-r border-black p-2.5 w-[20%] font-bold">{colRateHeader}</th>
                       <th className="border-r border-black p-2.5 w-[18%] font-bold">
                         Hiệu suất<sup>(1)</sup>
                       </th>
@@ -483,10 +550,28 @@ Trân trọng cảm ơn sự đồng hành và cống hiến của bạn cùng T
                     </tr>
                   </thead>
                   <tbody>
-                    {/* Row 1: Lương dạy */}
+                    {/* Row 1: Lương chính */}
                     <tr className="border-b border-black text-center">
                       <td className="border-r border-black p-2.5 text-left pl-3 font-medium">
-                        1. Lương dạy
+                        {isEditing ? (
+                          <input
+                            type="text"
+                            value={editedSlip.primarySalary.name || primaryDisplayName}
+                            onChange={e =>
+                              setEditedSlip({
+                                ...editedSlip,
+                                primarySalary: {
+                                  ...editedSlip.primarySalary,
+                                  name: e.target.value,
+                                },
+                              })
+                            }
+                            className="w-full border border-slate-300 rounded p-1 font-medium text-xs sm:text-sm"
+                            title="Tên thành phần lương chính"
+                          />
+                        ) : (
+                          primaryDisplayName
+                        )}
                       </td>
                       <td className="border-r border-black p-2.5">
                         {isEditing ? (
@@ -629,8 +714,8 @@ Trân trọng cảm ơn sự đồng hành và cống hiến của bạn cùng T
               </div>
             )}
 
-            {/* FORMAT 2: MẪU LƯƠNG TRỢ LÝ & LƯƠNG THEO SẢN PHẨM (LTSP) */}
-            {!isTeachingType && (
+            {/* FORMAT 2: MẪU LƯƠNG TRỢ LÝ CÓ KÈM SẢN PHẨM PHỤ (LTSP) */}
+            {!isTeachingType && currentData.pieceworkItems.length > 0 && (
               <div>
                 {/* 1. Lương chính */}
                 <h4 className="font-bold text-sm sm:text-base mb-2 text-black">
@@ -641,8 +726,8 @@ Trân trọng cảm ơn sự đồng hành và cống hiến của bạn cùng T
                   <thead>
                     <tr className="bg-slate-50 border-b border-black text-center font-bold">
                       <th className="border-r border-black p-2.5 w-[25%] font-bold">Thành phần</th>
-                      <th className="border-r border-black p-2.5 w-[15%] font-bold">Ngày công</th>
-                      <th className="border-r border-black p-2.5 w-[20%] font-bold">Lương (ngày)</th>
+                      <th className="border-r border-black p-2.5 w-[15%] font-bold">{colQtyHeader}</th>
+                      <th className="border-r border-black p-2.5 w-[20%] font-bold">{colRateHeader}</th>
                       <th className="border-r border-black p-2.5 w-[18%] font-bold">
                         Hiệu suất<sup>(1)</sup>
                       </th>
@@ -654,10 +739,28 @@ Trân trọng cảm ơn sự đồng hành và cống hiến của bạn cùng T
                     </tr>
                   </thead>
                   <tbody>
-                    {/* Row: Lương gốc */}
+                    {/* Row: Lương chính */}
                     <tr className="border-b border-black text-center">
                       <td className="border-r border-black p-2.5 text-left pl-3 font-medium">
-                        1. Lương gốc
+                        {isEditing ? (
+                          <input
+                            type="text"
+                            value={editedSlip.primarySalary.name || primaryDisplayName}
+                            onChange={e =>
+                              setEditedSlip({
+                                ...editedSlip,
+                                primarySalary: {
+                                  ...editedSlip.primarySalary,
+                                  name: e.target.value,
+                                },
+                              })
+                            }
+                            className="w-full border border-slate-300 rounded p-1 font-medium text-xs sm:text-sm"
+                            title="Tên thành phần lương chính"
+                          />
+                        ) : (
+                          primaryDisplayName
+                        )}
                       </td>
                       <td className="border-r border-black p-2.5">
                         {isEditing ? (
@@ -928,10 +1031,10 @@ Trân trọng cảm ơn sự đồng hành và cống hiến của bạn cùng T
                         <strong>(1):</strong> {cleanNote(currentData.notes?.note1, '(1):', isTeachingType ? 'Đánh giá dựa trên “Bảng Kiểm” tương ứng. KPI là giá trị % chất lượng công việc trong tháng.' : 'Đánh giá dựa trên “Bảng Kiểm” tương ứng.')}
                       </p>
                       <p>
-                        <strong>(2):</strong> {cleanNote(currentData.notes?.note2, '(2):', isTeachingType ? 'Lương nhận thực tế là “Số lượng × Đơn Giá × KPI”' : 'Lương nhận thực tế là “Khối lượng (Ngày/Buổi/Bài) × Đơn Giá × KPI”')}
+                        <strong>(2):</strong> {cleanNote(currentData.notes?.note2, '(2):', isTeachingType ? 'Lương nhận thực tế là “Số lượng × Đơn Giá × KPI”' : 'Lương nhận thực tế là “Khối lượng (Buổi/Bài/Đề/Ngày) × Đơn Giá × KPI”')}
                       </p>
                       <p>
-                        <strong>(3):</strong> {cleanNote(currentData.notes?.note3, '(3):', isTeachingType ? 'Đơn giá có thể tùy chỉnh linh hoạt theo từng nhân sự & ca dạy' : 'Đơn giá tính theo thỏa thuận ban đầu')}
+                        <strong>(3):</strong> {cleanNote(currentData.notes?.note3, '(3):', isTeachingType ? 'Đơn giá có thể tùy chỉnh linh hoạt theo từng nhân sự & ca dạy' : 'Đơn giá tính theo mức thù lao thống nhất ban đầu')}
                       </p>
                     </div>
                   </div>
@@ -962,15 +1065,15 @@ Trân trọng cảm ơn sự đồng hành và cống hiến của bạn cùng T
               <div className="flex flex-col items-center justify-between min-h-[160px]">
                 <div>
                   <p className="font-bold text-xs sm:text-sm uppercase tracking-wider text-slate-700 mb-1">
-                    NGƯỜI ĐÁNH GIÁ / TRƯỞNG BỘ PHẬN
+                    {orgSettings.managerTitle || 'NGƯỜI THUÊ & CHI TRẢ (CÁ NHÂN)'}
                   </p>
                   <p className="text-xs sm:text-sm italic text-slate-500">
-                    (Ký và duyệt)
+                    (Đã duyệt & chi trả thù lao)
                   </p>
                 </div>
                 <div className="h-16"></div> {/* Whitespace for signing */}
                 <p className="font-bold text-sm sm:text-base text-black">
-                  Ban kiểm duyệt
+                  {cleanPersonName(orgSettings.managerName, 'Đại Diện Lớp')}
                 </p>
               </div>
 
@@ -994,8 +1097,8 @@ Trân trọng cảm ơn sự đồng hành và cống hiến của bạn cùng T
                       {/* Logo and Header */}
                       <div className="flex items-center justify-between border-b border-black pb-3 mb-6 break-inside-avoid print:break-inside-avoid" style={{ pageBreakInside: 'avoid', breakInside: 'avoid' }}>
                         <div>
-                          <h4 className="font-bold text-lg text-black uppercase tracking-tight">ÔN THI HSGQG SINH HỌC</h4>
-                          <p className="text-xs text-slate-500">Hệ thống quản trị nhân sự & đào tạo</p>
+                          <h4 className="font-bold text-lg text-black uppercase tracking-tight">{orgSettings.orgName || 'LỚP ÔN THI HSGQG SINH HỌC'}</h4>
+                          <p className="text-xs text-slate-500">Lớp Ôn Thi HSGQG Sinh Học • Theo dõi chất lượng cộng tác viên</p>
                         </div>
                         <div className="text-right shrink-0">
                           <span className="font-mono text-xs font-bold border border-black px-2 py-0.5 rounded uppercase whitespace-nowrap">
@@ -1033,7 +1136,7 @@ Trân trọng cảm ơn sự đồng hành và cống hiến của bạn cùng T
                           <tr className="border-b border-black break-inside-avoid print:break-inside-avoid" style={{ pageBreakInside: 'avoid', breakInside: 'avoid' }}>
                             <td className="border-r border-black p-2.5">
                               <span>Người đánh giá: </span>
-                              <strong className="text-black">{evalRec.evaluatorName || 'Ban kiểm duyệt'}</strong>
+                              <strong className="text-black">{cleanPersonName(evalRec.evaluatorName, 'Đại Diện Lớp')}</strong>
                             </td>
                             <td className="p-2.5">
                               <span>Ngày đánh giá: </span>
@@ -1153,12 +1256,14 @@ Trân trọng cảm ơn sự đồng hành và cống hiến của bạn cùng T
                         <div className="flex flex-col items-center justify-between min-h-[150px]">
                           <div>
                             <p className="font-bold text-xs uppercase tracking-wider text-slate-700 mb-1">
-                              NGƯỜI ĐÁNH GIÁ / TRƯỞNG BỘ PHẬN
+                              {orgSettings.managerTitle || 'CÁ NHÂN PHỤ TRÁCH LỚP'}
                             </p>
                             <p className="text-[11px] italic text-slate-500">(Ký và duyệt)</p>
                           </div>
-                          <div className="h-14"></div>
-                          <p className="font-bold text-sm text-black">Ban kiểm duyệt</p>
+                          <div className="h-14"></div> {/* Whitespace for signing */}
+                          <p className="font-bold text-sm text-black">
+                            {cleanPersonName(evalRec.evaluatorName || orgSettings.managerName, 'Đại Diện Lớp')}
+                          </p>
                         </div>
                       </div>
 
@@ -1173,6 +1278,14 @@ Trân trọng cảm ơn sự đồng hành và cống hiến của bạn cùng T
         </div>
 
       </div>
+
+      {/* Contract Modal */}
+      {showContractModal && currentStaff && (
+        <ContractModal
+          staff={currentStaff}
+          onClose={() => setShowContractModal(false)}
+        />
+      )}
     </div>
   );
 };

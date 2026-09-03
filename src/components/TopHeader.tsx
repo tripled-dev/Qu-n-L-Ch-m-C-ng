@@ -35,8 +35,8 @@ export const TopHeader: React.FC<TopHeaderProps> = ({ onOpenMobileSidebar }) => 
 
   const tabTitles: Record<string, { title: string; subtitle: string }> = {
     payroll: {
-      title: 'Quản Lý Bảng Lương & Phiếu Lương',
-      subtitle: `Kỳ lương tháng ${formatMonthDisplay(currentMonth)} • Tính lương theo quy chuẩn Triple D`,
+      title: 'Quản Lý Thù Lao & Phiếu Thanh Toán',
+      subtitle: `Kỳ thanh toán tháng ${formatMonthDisplay(currentMonth)} • Tính thù lao theo khối lượng & bảng kiểm`,
     },
     timesheet: {
       title: 'Chấm Công & Khối Lượng Giảng Dạy',
@@ -69,8 +69,8 @@ export const TopHeader: React.FC<TopHeaderProps> = ({ onOpenMobileSidebar }) => 
   };
 
   const currentInfo = tabTitles[activeTab] || {
-    title: 'Hệ Thống Quản Lý Lương Triple D',
-    subtitle: 'Ôn Thi HSGQG Sinh Học',
+    title: 'Hệ Thống Quản Lý Thù Lao & Lớp Học',
+    subtitle: 'Lớp Ôn Thi HSGQG Sinh Học • Đại Diện Lớp',
   };
 
   const allDataMonths = [

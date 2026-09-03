@@ -8,13 +8,15 @@ import {
 } from '../types';
 
 export const INITIAL_ORG_SETTINGS: OrgSettings = {
-  orgName: 'TRIPLE D ÔN THI HSGQG MÔN SINH HỌC',
+  orgName: 'Lớp Ôn Thi HSGQG Sinh Học',
   location: 'Hà Nội',
-  managerTitle: 'ĐIỀU HÀNH TRIPLE D',
-  managerName: 'Đặng Tuấn Anh',
-  financeTitle: 'BAN KINH TẾ & VẬN HÀNH',
-  financeName: 'Trần Hạnh Dung',
-  showSignatures: true,
+  managerTitle: 'ĐẠI DIỆN LỚP',
+  managerName: 'Đại Diện Lớp',
+  contactPhone: '0912 345 678',
+  contactEmail: 'hsgqg.sinhhoc@gmail.com',
+  financeTitle: 'Đại Diện Lớp',
+  financeName: 'Đại Diện Lớp',
+  showSignatures: false,
   currencySymbol: 'VNĐ',
   defaultWorkingDaysInMonth: 26,
 };
@@ -48,8 +50,8 @@ export const INITIAL_CHECKLIST_TEMPLATES: ChecklistTemplate[] = [
           },
           {
             id: 'dh_c1_3',
-            title: 'Đảm bảo câu hỏi/nội dung thuộc bản quyền sở hữu có tính độc quyền.',
-            details: ['Bản quyền thuộc Triple D', 'Không sao chép trái phép'],
+            title: 'Đảm bảo câu hỏi, bài tập tự biên soạn kỹ lưỡng, phục vụ học tập hiệu quả.',
+            details: ['Tài liệu nội bộ lớp học', 'Bảo quản cẩn thận, không phát tán ra ngoài'],
             weight: 10,
           },
         ],
@@ -57,7 +59,7 @@ export const INITIAL_CHECKLIST_TEMPLATES: ChecklistTemplate[] = [
       {
         id: 'dh_g2',
         stt: 2,
-        groupName: 'Yêu Cầu Về Kỷ Luật',
+        groupName: 'Ý Thức & Tinh Thần Trách Nhiệm',
         totalWeight: 15,
         criteria: [
           {
@@ -335,8 +337,8 @@ export const INITIAL_CHECKLIST_TEMPLATES: ChecklistTemplate[] = [
           },
           {
             id: 'sb_c1_2',
-            title: 'Bàn giao tài liệu đúng thời hạn cam kết với.',
-            details: ['Bàn giao đúng deadline cam kết'],
+            title: 'Bàn giao tài liệu đúng thời hạn theo thỏa thuận thống nhất.',
+            details: ['Bàn giao đúng thời gian thống nhất'],
             weight: 30,
           },
         ],
@@ -376,7 +378,7 @@ export const INITIAL_CHECKLIST_TEMPLATES: ChecklistTemplate[] = [
           {
             id: 'sb_c3_2',
             title: 'Đúng phông chữ, mẫu căn chỉnh, hình ảnh minh họa rõ nét theo các yêu cầu.',
-            details: ['Đúng chuẩn định dạng Triple D', 'Hình vẽ minh họa rõ nét'],
+            details: ['Đúng chuẩn định dạng của lớp', 'Hình vẽ minh họa rõ nét'],
             weight: 10,
           },
         ],
@@ -390,10 +392,12 @@ export const SAMPLE_ONE_STAFF: Staff[] = [
   {
     id: 'staff_1',
     code: 'TD-001',
-    fullName: 'Đặng Tuấn Anh',
+    fullName: 'Lê Hoàng Nam',
+    citizenId: '001201012345',
+    cccd: '001201012345',
     role: 'Giảng viên Sinh học',
     roleType: 'giang_vien',
-    roles: ['giang_vien', 'tro_giang'],
+    roles: ['giang_vien'],
     assignedChecklistId: 'chk_day_hoc',
     assignedChecklistIds: ['chk_day_hoc'],
     departmentId: 'day_hoc',
@@ -401,9 +405,9 @@ export const SAMPLE_ONE_STAFF: Staff[] = [
     division: 'CHUYEN_MON',
     bankAccount: '1903456789012',
     bankName: 'Techcombank',
-    bankOwner: 'DANG TUAN ANH',
+    bankOwner: 'LE HOANG NAM',
     phone: '0987654321',
-    email: 'tuananh.hsgqg@tripled.edu.vn',
+    email: 'hoangnam.sinhhoc@gmail.com',
     salaryModel: 'session',
     baseRate: 70000,
     rates: {
@@ -448,7 +452,7 @@ export const INITIAL_EVALUATIONS: KpiEvaluation[] = [
     month: '2026-07',
     templateId: 'chk_day_hoc',
     evaluationDate: '2026-07-31',
-    evaluatorName: 'Đặng Tuấn Anh',
+    evaluatorName: 'Đại Diện Lớp',
     scores: {
       dh_c1_1: 100,
       dh_c1_2: 100,

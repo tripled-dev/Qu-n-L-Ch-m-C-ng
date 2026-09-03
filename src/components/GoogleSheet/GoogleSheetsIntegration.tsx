@@ -367,7 +367,7 @@ export const GoogleSheetsIntegration: React.FC = () => {
             onClick={() => {
               showConfirm({
                 title: 'Khôi phục dữ liệu mẫu ban đầu',
-                message: 'Thao tác này sẽ đặt lại dữ liệu về trạng thái mẫu ban đầu của Triple D. Bạn có muốn tiếp tục?',
+                message: 'Thao tác này sẽ đặt lại dữ liệu về trạng thái mẫu ban đầu của lớp học cô Dung. Bạn có muốn tiếp tục?',
                 confirmText: 'Khôi phục mẫu',
                 variant: 'warning',
                 onConfirm: () => {

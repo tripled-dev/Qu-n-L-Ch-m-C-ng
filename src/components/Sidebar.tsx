@@ -191,21 +191,21 @@ export const Sidebar: React.FC<SidebarProps> = ({
         {/* Header Branding */}
         <div className="flex items-center justify-between h-18 px-4 border-b border-slate-800/80 bg-slate-950 shrink-0">
           <div className="flex items-center gap-3 overflow-hidden">
-            <div className="w-10 h-10 rounded-xl bg-linear-to-br from-amber-400 to-amber-600 text-slate-950 font-black text-lg flex items-center justify-center shrink-0 shadow-md tracking-tight">
-              3D
+            <div className="w-10 h-10 rounded-xl bg-linear-to-br from-teal-400 to-emerald-600 text-slate-950 font-black text-lg flex items-center justify-center shrink-0 shadow-md tracking-tight">
+              HD
             </div>
             {!isCollapsed && (
               <div className="flex flex-col truncate">
                 <div className="flex items-center gap-1.5">
-                  <span className="font-extrabold text-white text-base tracking-tight truncate">
-                    TRIPLE D
+                  <span className="font-extrabold text-white text-sm tracking-tight truncate">
+                    ĐẠI DIỆN LỚP
                   </span>
-                  <span className="text-[10px] font-bold uppercase tracking-wider bg-amber-500/20 text-amber-300 px-1.5 py-0.5 rounded border border-amber-500/30">
-                    PRO
+                  <span className="text-[10px] font-bold uppercase tracking-wider bg-teal-500/20 text-teal-300 px-1.5 py-0.5 rounded border border-teal-500/30">
+                    LỚP HỌC
                   </span>
                 </div>
                 <span className="text-[11px] text-slate-400 truncate">
-                  Ôn Thi HSGQG Sinh Học
+                  Bồi Dưỡng & Ôn Thi Sinh Học
                 </span>
               </div>
             )}
@@ -370,7 +370,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             <div className="space-y-2">
               <div className="flex items-center justify-between text-xs text-slate-400">
                 <span className="font-semibold text-slate-300 truncate">
-                  {orgSettings.orgName || 'Triple D'}
+                  {orgSettings.orgName || 'Lớp Ôn Thi HSGQG Sinh Học'}
                 </span>
                 <span className="text-[10px] text-slate-400 bg-slate-800 px-1.5 py-0.5 rounded">
                   v2.5
@@ -405,7 +405,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     onClick={() => {
                       showConfirm({
                         title: 'Khôi phục dữ liệu mẫu gốc',
-                        message: 'Bạn có chắc muốn khôi phục lại dữ liệu mẫu gốc ban đầu của Triple D?',
+                        message: 'Bạn có chắc muốn khôi phục lại dữ liệu mẫu của Lớp Ôn Thi HSGQG Sinh Học?',
                         confirmText: 'Khôi phục mẫu',
                         variant: 'warning',
                         onConfirm: () => {

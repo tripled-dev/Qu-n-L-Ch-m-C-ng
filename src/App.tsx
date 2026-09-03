@@ -50,8 +50,8 @@ const AppLayout: React.FC = () => {
         {/* Subtle Footer */}
         <footer className="no-print border-t border-slate-200/80 bg-white/60 py-3 text-center text-xs text-slate-500 mt-auto shrink-0">
           <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-2">
-            <span>© {new Date().getFullYear()} Triple D - Hệ Thống Quản Lý Lương & Đánh Giá KPI Trọng Số</span>
-            <span className="text-[11px] text-slate-400">Quy chuẩn chuyên môn HSGQG Sinh Học</span>
+            <span>© {new Date().getFullYear()} Lớp Ôn Thi HSGQG Sinh Học • Đại Diện Lớp</span>
+            <span className="text-[11px] text-slate-400">Hệ Thống Quản Lý Thù Lao & Cộng Tác Viên</span>
           </div>
         </footer>
       </div>

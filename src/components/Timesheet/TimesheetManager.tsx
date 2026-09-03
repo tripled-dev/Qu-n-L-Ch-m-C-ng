@@ -98,6 +98,7 @@ export const TimesheetManager: React.FC = () => {
       const isTutor = hasStaffRole(staff, 'tro_giang');
       const isGrader = hasStaffRole(staff, 'cham_thi');
       const isAssistant = hasStaffRole(staff, 'tro_ly');
+      const isExamCrafter = hasStaffRole(staff, 'soan_de_thi');
 
       const teachingLogs = staffLogs.filter(t => t.type === 'teaching_session');
       const tutoringLogs = staffLogs.filter(t => t.type === 'tutoring_session');
@@ -159,6 +160,7 @@ export const TimesheetManager: React.FC = () => {
       const tutoringKpi = getKpiForDept('chk_tro_giang', 'Trợ Giảng');
       const gradingKpi = getKpiForDept('chk_cham_thi', 'Chấm Thi');
       const dayWorkKpi = getKpiForDept('chk_tro_ly', 'Trợ Lý');
+      const soanBaiKpi = getKpiForDept('chk_soan_bai', 'Soạn Bài');
 
       const kpiScoresMap: Record<string, number> = {};
       assignedChecklists.forEach(c => {
@@ -172,10 +174,15 @@ export const TimesheetManager: React.FC = () => {
       const gradingPayGross = gradingLogs.reduce((sum, t) => sum + (t.quantity * (t.rate || rates.gradingRate)), 0);
       const dayWorkPayGross = dayWorkLogs.reduce((sum, t) => sum + (t.quantity * (t.rate || rates.dayWorkRate)), 0);
 
+      const effectiveGradingKpi = isExamCrafter ? soanBaiKpi : gradingKpi;
       const teachingPay = Math.round(teachingPayGross * (teachingKpi / 100));
       const tutoringPay = Math.round(tutoringPayGross * (tutoringKpi / 100));
-      const gradingPay = Math.round(gradingPayGross * (gradingKpi / 100));
-      const dayWorkPay = isAssistant ? Math.round(dayWorkPayGross * (dayWorkKpi / 100)) : 0;
+      const gradingPay = Math.round(gradingPayGross * (effectiveGradingKpi / 100));
+      const dayWorkPay = isAssistant 
+        ? Math.round(dayWorkPayGross * (dayWorkKpi / 100)) 
+        : isExamCrafter 
+          ? Math.round(dayWorkPayGross * (soanBaiKpi / 100)) 
+          : 0;
 
       const totalEstimatedPay = teachingPay + tutoringPay + gradingPay + dayWorkPay + totalBonus;
 
@@ -207,9 +214,9 @@ export const TimesheetManager: React.FC = () => {
 
       const gradingTiersData = groupLogsByTier(
         gradingLogs, 
-        'Bài', 
+        isExamCrafter ? 'Đề' : 'Bài', 
         rates.gradingRate, 
-        `Chấm thi tháng ${formatMonthDisplay(currentMonth)}`, 
+        isExamCrafter ? `Biên soạn đề thi tháng ${formatMonthDisplay(currentMonth)}` : `Chấm thi tháng ${formatMonthDisplay(currentMonth)}`, 
         rates.gradingTiers || []
       );
 
@@ -223,6 +230,7 @@ export const TimesheetManager: React.FC = () => {
         isTutor,
         isGrader,
         isAssistant,
+        isExamCrafter,
         totalLogs: staffLogs.length,
         teachingQty,
         tutoringQty,
@@ -340,7 +348,7 @@ export const TimesheetManager: React.FC = () => {
       teachingSessions: teachingLogs.reduce((sum, t) => sum + t.quantity, 0),
       teachingRate: rates.teachingRate,
       tutoringTiers: groupLogsByTier(tutoringLogs, 'Buổi', rates.tutoringRate, `Trợ giảng tháng ${formatMonthDisplay(currentMonth)}`, rates.tutoringTiers || []),
-      gradingTiers: groupLogsByTier(gradingLogs, 'Bài', rates.gradingRate, `Chấm thi tháng ${formatMonthDisplay(currentMonth)}`, rates.gradingTiers || []),
+      gradingTiers: groupLogsByTier(gradingLogs, hasStaffRole(staff, 'soan_de_thi') ? 'Đề' : 'Bài', rates.gradingRate, hasStaffRole(staff, 'soan_de_thi') ? `Soạn đề thi tháng ${formatMonthDisplay(currentMonth)}` : `Chấm thi tháng ${formatMonthDisplay(currentMonth)}`, rates.gradingTiers || []),
       dayWorkCount: dayWorkLogs.reduce((sum, t) => sum + t.quantity, 0),
       dayWorkRate: rates.dayWorkRate,
       bonusAmount: (existingSlip?.generalBonus || 0) + bonusLogs.reduce((sum, t) => sum + (t.quantity * t.rate || t.rate || t.quantity), 0),
@@ -641,7 +649,7 @@ export const TimesheetManager: React.FC = () => {
                       2. Trợ Giảng <span className="text-[9px] font-normal block text-purple-300">(Buổi)</span>
                     </th>
                     <th className="py-3 px-2 text-center bg-emerald-950/80 min-w-[95px] text-emerald-200">
-                      3. Chấm Bài <span className="text-[9px] font-normal block text-emerald-300">(Bài)</span>
+                      3. Chấm Bài / Đề <span className="text-[9px] font-normal block text-emerald-300">(Bài/Đề)</span>
                     </th>
                     <th className="py-3 px-2 text-center bg-amber-950/80 min-w-[95px] text-amber-200">
                       4. Ngày Công <span className="text-[9px] font-normal block text-amber-300">(Trợ lý)</span>
@@ -654,7 +662,7 @@ export const TimesheetManager: React.FC = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 font-medium text-slate-800">
-                  {filteredMatrix.map(({ staff, roleMeta, assignedChecklists, isTeacher, isTutor, isGrader, isAssistant, teachingQty, tutoringQty, gradingQty, dayWorkQty, totalBonus, totalEstimatedPay, kpiScoresMap, tutoringTiersData, gradingTiersData, rates }) => (
+                  {filteredMatrix.map(({ staff, roleMeta, assignedChecklists, isTeacher, isTutor, isGrader, isAssistant, isExamCrafter, teachingQty, tutoringQty, gradingQty, dayWorkQty, totalBonus, totalEstimatedPay, kpiScoresMap, tutoringTiersData, gradingTiersData, rates }) => (
                     <tr key={staff.id} className="hover:bg-slate-50/80 transition-colors">
                       
                       {/* Staff & Role with Short Tag */}
@@ -770,9 +778,9 @@ export const TimesheetManager: React.FC = () => {
                         )}
                       </td>
 
-                      {/* 3. Grading Input (Chấm thi) */}
+                      {/* 3. Grading Input (Chấm thi / Soạn đề) */}
                       <td className="py-2 px-2 text-center bg-emerald-50/20">
-                        {isGrader ? (
+                        {(isGrader || isExamCrafter) ? (
                           <div className="flex flex-col gap-1 items-center justify-center">
                             {gradingTiersData.map((tier, idx) => (
                               <div key={idx} className={`flex ${gradingTiersData.length > 1 ? 'flex-row items-center gap-1.5 justify-between w-[95px] mx-auto' : 'flex-col items-center'}`}>
@@ -782,7 +790,7 @@ export const TimesheetManager: React.FC = () => {
                                 <div className="inline-flex shrink-0 items-center justify-center border border-emerald-200 rounded-lg bg-white overflow-hidden shadow-2xs">
                                   <button
                                     type="button"
-                                    onClick={() => handleInlineWorkloadChange(staff, 'grading', tier.quantity - 1, tier.rate, tier.label, tier.unit)}
+                                    onClick={() => handleInlineWorkloadChange(staff, 'grading', tier.quantity - 1, tier.rate, isExamCrafter ? `Biên soạn đề thi tháng ${formatMonthDisplay(currentMonth)}` : tier.label, isExamCrafter ? 'Đề' : tier.unit)}
                                     className="w-5 h-7 text-slate-400 hover:text-emerald-700 hover:bg-emerald-50 flex items-center justify-center font-bold text-xs cursor-pointer border-r border-emerald-100"
                                   >
                                     -
@@ -791,12 +799,12 @@ export const TimesheetManager: React.FC = () => {
                                     type="number"
                                     min="0"
                                     value={tier.quantity}
-                                    onChange={e => handleInlineWorkloadChange(staff, 'grading', parseInt(e.target.value) || 0, tier.rate, tier.label, tier.unit)}
+                                    onChange={e => handleInlineWorkloadChange(staff, 'grading', parseInt(e.target.value) || 0, tier.rate, isExamCrafter ? `Biên soạn đề thi tháng ${formatMonthDisplay(currentMonth)}` : tier.label, isExamCrafter ? 'Đề' : tier.unit)}
                                     className="w-10 h-7 text-center font-mono font-bold text-xs text-emerald-700 focus:outline-none focus:bg-emerald-50/50"
                                   />
                                   <button
                                     type="button"
-                                    onClick={() => handleInlineWorkloadChange(staff, 'grading', tier.quantity + 1, tier.rate, tier.label, tier.unit)}
+                                    onClick={() => handleInlineWorkloadChange(staff, 'grading', tier.quantity + 1, tier.rate, isExamCrafter ? `Biên soạn đề thi tháng ${formatMonthDisplay(currentMonth)}` : tier.label, isExamCrafter ? 'Đề' : tier.unit)}
                                     className="w-5 h-7 text-slate-400 hover:text-emerald-700 hover:bg-emerald-50 flex items-center justify-center font-bold text-xs cursor-pointer border-l border-emerald-100"
                                   >
                                     +
@@ -948,10 +956,12 @@ export const TimesheetManager: React.FC = () => {
                 </div>
               )}
 
-              {/* 3. Số bài chấm */}
-              {hasStaffRole(bulkStaff, 'cham_thi') && (
+              {/* 3. Số bài chấm / soạn đề */}
+              {(hasStaffRole(bulkStaff, 'cham_thi') || hasStaffRole(bulkStaff, 'soan_de_thi')) && (
                 <div className="bg-emerald-50/50 p-2.5 rounded-xl border border-emerald-200/80 flex flex-col gap-2">
-                  <div className="font-bold text-xs text-emerald-950">3. Số bài chấm</div>
+                  <div className="font-bold text-xs text-emerald-950">
+                    {hasStaffRole(bulkStaff, 'soan_de_thi') ? '3. Số đề thi biên soạn' : '3. Số bài chấm'}
+                  </div>
                   {bulkFormData.gradingTiers.map((tier, idx) => (
                     <div key={idx} className="flex items-center justify-between gap-3 bg-white p-2 rounded-lg border border-emerald-100">
                       <div>

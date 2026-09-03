@@ -37,6 +37,7 @@ export function sanitizeStaff(s: Staff): Staff {
     if (roles.includes('tro_giang')) defaultIds.push('chk_tro_giang');
     if (roles.includes('cham_thi')) defaultIds.push('chk_cham_thi');
     if (roles.includes('tro_ly')) defaultIds.push('chk_tro_ly');
+    if (roles.includes('soan_de_thi')) defaultIds.push('chk_soan_bai');
     assignedChecklistIds = Array.from(new Set(defaultIds));
   }
 
@@ -126,7 +127,7 @@ export function sanitizeTimesheetEntry(t: TimesheetEntry): TimesheetEntry {
 
 export const GOOGLE_APPS_SCRIPT_TEMPLATE = `/**
  * =========================================================================
- * TRIPLE D - GOOGLE APPS SCRIPT ĐỒNG BỘ DỮ LIỆU BẢNG LƯƠNG & CHẤM CÔNG
+ * LỚP ÔN THI HSGQG SINH HỌC - APPS SCRIPT ĐỒNG BỘ DỮ LIỆU BẢNG LƯƠNG & CHẤM CÔNG
  * =========================================================================
  * 
  * HƯỚNG DẪN CÀI ĐẶT 3 BƯỚC:
@@ -134,7 +135,7 @@ export const GOOGLE_APPS_SCRIPT_TEMPLATE = `/**
  * 2. Xóa hết code cũ trong file Code.gs, Dán toàn bộ mã nguồn này vào -> Bấm nút 'Lưu' (hình đĩa mềm)
  * 3. Bấm nút 'Triển khai' (Deploy) màu xanh góc phải trên -> Chọn 'Triển khai mới' (New deployment)
  *    - Loại: 'Ứng dụng web' (Web app)
- *    - Mô tả: 'Triple D Payroll API'
+ *    - Mô tả: 'HSGQG Sinh Hoc Class API'
  *    - Thực thi dưới dạng: 'Tôi' (Me)
  *    - Ai có quyền truy cập: 'Bất kỳ ai' (Anyone)
  *    - Bấm 'Triển khai' -> Cấp quyền nếu hỏi -> Copy 'URL Ứng dụng web' (kết thúc bằng /exec)
@@ -157,7 +158,7 @@ function doGet(e) {
     
     return ContentService.createTextOutput(JSON.stringify({
       status: 'success',
-      message: 'Triple D Apps Script API is running!'
+      message: 'HSGQG Sinh Hoc Apps Script API is running!'
     })).setMimeType(ContentService.MimeType.JSON);
   } catch (err) {
     return ContentService.createTextOutput(JSON.stringify({
@@ -398,12 +399,12 @@ function readAllDataFromSheets(ss) {
       cfgMap[String(cfgRows[i][0])] = cfgRows[i][1];
     }
     result.orgSettings = {
-      orgName: cfgMap['orgName'] || 'TRIPLE D ÔN THI HSGQG MÔN SINH HỌC',
+      orgName: cfgMap['orgName'] || 'Lớp Ôn Thi HSGQG Sinh Học',
       location: cfgMap['location'] || 'Hà Nội',
-      managerTitle: cfgMap['managerTitle'] || 'ĐIỀU HÀNH TRIPLE D',
-      managerName: cfgMap['managerName'] || 'Đặng Tuấn Anh',
+      managerTitle: cfgMap['managerTitle'] || 'TRƯỞNG NHÓM ĐIỀU HÀNH',
+      managerName: cfgMap['managerName'] || 'Đại Diện Lớp',
       financeTitle: cfgMap['financeTitle'] || 'BAN KINH TẾ & VẬN HÀNH',
-      financeName: cfgMap['financeName'] || 'Trần Hạnh Dung',
+      financeName: cfgMap['financeName'] || 'Đại Diện Lớp',
       showSignatures: cfgMap['showSignatures'] !== false && cfgMap['showSignatures'] !== 'false',
       currencySymbol: cfgMap['currencySymbol'] || 'VNĐ',
       defaultWorkingDaysInMonth: Number(cfgMap['defaultWorkingDaysInMonth']) || 26

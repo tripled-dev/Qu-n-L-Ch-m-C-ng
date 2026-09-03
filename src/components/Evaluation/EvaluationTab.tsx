@@ -142,7 +142,7 @@ export const EvaluationTab: React.FC = () => {
                     </span>
                   </div>
                   <div className="font-bold text-slate-900 text-xs">
-                    {assignedChecklist?.title || 'Bảng Kiểm Chuẩn Triple D'}
+                    {assignedChecklist?.title || 'Bảng Kiểm Chuẩn Lớp Học'}
                   </div>
                   {evalRecord?.evaluatorName ? (
                     <div className="text-slate-500 text-[11px] pt-1.5 border-t border-slate-200 flex justify-between">

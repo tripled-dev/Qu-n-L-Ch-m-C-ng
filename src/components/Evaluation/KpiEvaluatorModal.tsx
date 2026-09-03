@@ -30,6 +30,7 @@ export const KpiEvaluatorModal: React.FC<KpiEvaluatorModalProps> = ({ initialSta
     saveEvaluation, 
     getStaffEvaluationForMonth,
     showToast,
+    orgSettings,
   } = useApp();
 
   const [selectedStaffId, setSelectedStaffId] = useState<string>(
@@ -67,14 +68,14 @@ export const KpiEvaluatorModal: React.FC<KpiEvaluatorModalProps> = ({ initialSta
   const [scores, setScores] = useState<Record<string, number>>({});
   const [soanBaiScores, setSoanBaiScores] = useState<Record<string, number>>({});
   const [showSoanBaiSubModal, setShowSoanBaiSubModal] = useState(false);
-  const [evaluatorName, setEvaluatorName] = useState('Ban Quản Lý Triple D');
+  const [evaluatorName, setEvaluatorName] = useState(orgSettings?.managerName || 'Đại Diện Lớp');
   const [notes, setNotes] = useState('');
 
   // Load existing or initialize with 100%
   useEffect(() => {
     if (existingEval) {
       setScores(existingEval.scores || {});
-      setEvaluatorName(existingEval.evaluatorName || 'Ban Quản Lý Triple D');
+      setEvaluatorName(existingEval.evaluatorName || orgSettings?.managerName || 'Đại Diện Lớp');
       setNotes(existingEval.notes || '');
     } else {
       // Default all criteria to 100%
@@ -85,8 +86,9 @@ export const KpiEvaluatorModal: React.FC<KpiEvaluatorModalProps> = ({ initialSta
         });
       });
       setScores(initial);
+      setEvaluatorName(orgSettings?.managerName || 'Đại Diện Lớp');
     }
-  }, [selectedStaffId, selectedTemplateId, currentMonth]);
+  }, [selectedStaffId, selectedTemplateId, currentMonth, orgSettings?.managerName]);
 
   // Auto-fetch linked Soan Bai score if evaluated this month
   const calculatedSoanBaiScore = useMemo(() => {

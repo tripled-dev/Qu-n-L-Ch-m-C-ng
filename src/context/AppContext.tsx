@@ -17,7 +17,7 @@ import {
   INITIAL_TIMESHEET_ENTRIES,
 } from '../data/initialData';
 import { getStaffDutyRates, resolveStaffRoleType, hasStaffRole } from '../data/roleDefinitions';
-import { calculateKpiFromScores, getDefaultSalaryMonth } from '../utils/formatters';
+import { calculateKpiFromScores, getDefaultSalaryMonth, cleanPersonName } from '../utils/formatters';
 import {
   fetchFromGoogleSheet,
   pushToGoogleSheet,
@@ -292,7 +292,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed.map((s: Staff) => {
+            const updated = { ...s };
+            if (updated.fullName) {
+              updated.fullName = cleanPersonName(updated.fullName, updated.fullName);
+            }
+            if (updated.email && updated.email.includes('tuananh')) {
+              updated.email = 'hoangnam.sinhhoc@gmail.com';
+            }
+            return updated;
+          });
+        }
       } catch (e) {}
     }
     return INITIAL_STAFF;
@@ -303,7 +314,22 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) return deduplicatePayrollSlips(parsed);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return deduplicatePayrollSlips(parsed).map((s: MonthlyPayrollSlip) => {
+            const slip = { ...s };
+            if (slip.staffName) {
+              slip.staffName = cleanPersonName(slip.staffName, slip.staffName);
+            }
+            if (slip.signatures) {
+              slip.signatures = {
+                ...slip.signatures,
+                managerName: cleanPersonName(slip.signatures.managerName, 'Đại Diện Lớp'),
+                financeName: cleanPersonName(slip.signatures.financeName, 'Đại Diện Lớp'),
+              };
+            }
+            return slip;
+          });
+        }
       } catch (e) {}
     }
     return INITIAL_PAYROLL_SLIPS;
@@ -345,7 +371,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed.map((ev: KpiEvaluation) => {
+            return {
+              ...ev,
+              evaluatorName: cleanPersonName(ev.evaluatorName, 'Đại Diện Lớp'),
+            };
+          });
+        }
       } catch (e) {}
     }
     return INITIAL_EVALUATIONS;
@@ -353,7 +386,29 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const [orgSettings, setOrgSettings] = useState<OrgSettings>(() => {
     const saved = localStorage.getItem(`${LOCAL_STORAGE_KEY_PREFIX}org_settings`);
-    return saved ? JSON.parse(saved) : INITIAL_ORG_SETTINGS;
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        const orgNameClean = (!parsed.orgName || 
+          parsed.orgName.includes('TRIPLE D') || 
+          parsed.orgName.includes('Triple D') || 
+          parsed.orgName.includes('CÔ TRẦN HẠNH DUNG') || 
+          parsed.orgName.includes('Lớp Sinh Học') || 
+          parsed.orgName.includes('LỚP HỌC'))
+          ? 'Lớp Ôn Thi HSGQG Sinh Học'
+          : parsed.orgName;
+        return {
+          ...INITIAL_ORG_SETTINGS,
+          ...parsed,
+          orgName: orgNameClean,
+          managerName: cleanPersonName(parsed.managerName, 'Đại Diện Lớp'),
+          managerTitle: parsed.managerTitle?.includes('TRIPLE D') || !parsed.managerTitle ? 'Cá nhân phụ trách / Người thuê' : parsed.managerTitle,
+          financeName: cleanPersonName(parsed.financeName, 'Đại Diện Lớp'),
+          financeTitle: parsed.financeTitle?.includes('TRIPLE D') || !parsed.financeTitle ? 'Người chi trả thù lao' : parsed.financeTitle,
+        };
+      } catch (e) {}
+    }
+    return INITIAL_ORG_SETTINGS;
   });
 
   const [googleSheetUrl, setGoogleSheetUrlState] = useState<string>(() => {
@@ -441,6 +496,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const rates = getStaffDutyRates(staff);
       const roleType = resolveStaffRoleType(staff);
       const isAssistant = roleType === 'tro_ly' || staff.departmentId === 'tro_ly' || hasStaffRole(staff, 'tro_ly');
+      const isExamCrafter = roleType === 'soan_de_thi' || staff.departmentId === 'soan_de' || hasStaffRole(staff, 'soan_de_thi');
 
       const existingSlip = curSlips.find(
         s =>
@@ -488,6 +544,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const tutoringKpi = getKpiForDept('chk_tro_giang', 'Trợ Giảng');
       const gradingKpi = getKpiForDept('chk_cham_thi', 'Chấm Thi');
       const dayWorkKpi = getKpiForDept('chk_tro_ly', 'Trợ Lý');
+      const soanBaiKpi = getKpiForDept('chk_soan_bai', 'Soạn Bài');
 
       // Filter staff timesheets for this month
       const staffTimesheets = curTimesheets.filter(
@@ -579,6 +636,25 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         primaryUnitPrice = effectiveGradingRate;
         primaryTotal = gradingAmount;
         primaryKpi = gradingKpi;
+      } else if (isExamCrafter && teachingQty === 0 && tutoringQty === 0) {
+        primaryName = '1. Lương soạn đề thi';
+        primaryKpi = soanBaiKpi;
+        if (gradingQty > 0) {
+          daysOrSessions = gradingQty;
+          primaryUnit = 'Đề';
+          primaryUnitPrice = effectiveGradingRate;
+          primaryTotal = Math.round(gradingGross * (soanBaiKpi / 100));
+        } else if (dayWorkQty > 0) {
+          daysOrSessions = dayWorkQty;
+          primaryUnit = 'Ngày công';
+          primaryUnitPrice = effectiveDayWorkRate;
+          primaryTotal = Math.round(dayWorkGross * (soanBaiKpi / 100));
+        } else {
+          daysOrSessions = 0;
+          primaryUnit = 'Đề';
+          primaryUnitPrice = staff.baseRate || 150000;
+          primaryTotal = 0;
+        }
       }
 
       // Secondary piecework items for remaining billable activities with exact ca lẻ itemization
@@ -643,7 +719,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
 
       // Add grading if not primary
-      if (primaryName !== '1. Lương chấm bài / thi' && gradingQty > 0) {
+      if (primaryName !== '1. Lương chấm bài / thi' && primaryName !== '1. Lương soạn đề thi' && gradingQty > 0) {
         if (gradingTiers.length > 1) {
           gradingTiers.forEach((tier, i) => {
             pieceworkItems.push({
@@ -672,7 +748,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
 
       // Add dayWork if not primary
-      if (isAssistant && primaryName !== '1. Lương ngày công (Trợ lý)' && dayWorkQty > 0) {
+      if (isAssistant && primaryName !== '1. Lương ngày công (Trợ lý)' && primaryName !== '1. Lương soạn đề thi' && dayWorkQty > 0) {
         pieceworkItems.push({
           id: `pw_day_${staff.id}`,
           workName: 'Ngày công (Trợ lý)',
@@ -764,12 +840,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             },
         signatures: {
           managerTitle: existingSlip?.signatures?.managerTitle || curOrgSettings.managerTitle,
-          managerName: existingSlip?.signatures?.managerName || curOrgSettings.managerName,
+          managerName: cleanPersonName(existingSlip?.signatures?.managerName || curOrgSettings.managerName, 'Đại Diện Lớp'),
           managerSignatureImg: existingSlip?.signatures?.managerSignatureImg !== undefined
             ? existingSlip.signatures.managerSignatureImg
             : curOrgSettings.managerSignatureImg,
           financeTitle: existingSlip?.signatures?.financeTitle || curOrgSettings.financeTitle,
-          financeName: existingSlip?.signatures?.financeName || curOrgSettings.financeName,
+          financeName: cleanPersonName(existingSlip?.signatures?.financeName || curOrgSettings.financeName, 'Đại Diện Lớp'),
           financeSignatureImg: existingSlip?.signatures?.financeSignatureImg !== undefined
             ? existingSlip.signatures.financeSignatureImg
             : curOrgSettings.financeSignatureImg,
