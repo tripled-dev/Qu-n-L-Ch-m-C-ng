@@ -12,7 +12,7 @@ export const STAFF_ROLE_DEFINITIONS: Record<StaffRoleType, StaffRoleMeta> = {
     defaultChecklistIds: ['chk_day_hoc'],
     defaultChecklistId: 'chk_day_hoc',
     defaultChecklistName: 'Bảng Kiểm Dạy Học',
-    description: 'Phụ trách giảng dạy trực tiếp, chuẩn bị bài giảng trước ≥ 2 ngày, tương tác giải đáp và quản lý video record.',
+    description: 'Phụ trách giảng dạy trực tiếp, chuẩn bị bài giảng trước ca dạy ít nhất 1 tuần, tương tác giải đáp và quản lý video record.',
     defaultBaseRate: 70000,
     badgeBg: 'bg-blue-50 text-blue-700',
     badgeText: 'text-blue-700',

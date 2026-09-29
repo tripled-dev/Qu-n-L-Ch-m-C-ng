@@ -397,14 +397,32 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           parsed.orgName.includes('LỚP HỌC'))
           ? 'Lớp Ôn Thi HSGQG Sinh Học'
           : parsed.orgName;
+        const mgrName = parsed.managerName && parsed.managerName !== 'Đại Diện Lớp'
+          ? cleanPersonName(parsed.managerName, 'Trần Hạnh Dung')
+          : 'Trần Hạnh Dung';
+        const finName = parsed.financeName && parsed.financeName !== 'Đại Diện Lớp'
+          ? cleanPersonName(parsed.financeName, 'Trần Hạnh Dung')
+          : 'Trần Hạnh Dung';
+
+        const contactPhoneClean = (parsed.contactPhone === '0912 345 678' || parsed.contactPhone === '0912345678') ? '' : (parsed.contactPhone || '');
+        const contactEmailClean = (parsed.contactEmail === 'hsgqg.sinhhoc@gmail.com') ? '' : (parsed.contactEmail || '');
+        // Clean out any legacy preset SVG signatures so only user-uploaded real signatures remain
+        const signatureClean = (parsed.managerSignatureImg && !parsed.managerSignatureImg.startsWith('data:image/svg+xml')) 
+          ? parsed.managerSignatureImg 
+          : '';
+
         return {
           ...INITIAL_ORG_SETTINGS,
           ...parsed,
           orgName: orgNameClean,
-          managerName: cleanPersonName(parsed.managerName, 'Đại Diện Lớp'),
-          managerTitle: parsed.managerTitle?.includes('TRIPLE D') || !parsed.managerTitle ? 'Cá nhân phụ trách / Người thuê' : parsed.managerTitle,
-          financeName: cleanPersonName(parsed.financeName, 'Đại Diện Lớp'),
-          financeTitle: parsed.financeTitle?.includes('TRIPLE D') || !parsed.financeTitle ? 'Người chi trả thù lao' : parsed.financeTitle,
+          managerName: mgrName,
+          managerTitle: (parsed.managerTitle?.includes('TRIPLE D') || !parsed.managerTitle || parsed.managerTitle === 'Cá nhân giao việc' || parsed.managerTitle === 'ĐẠI DIỆN LỚP' || parsed.managerTitle === 'Đại Diện Lớp') ? 'Người thuê' : parsed.managerTitle,
+          financeName: finName,
+          financeTitle: (parsed.financeTitle?.includes('TRIPLE D') || !parsed.financeTitle) ? 'Người chi trả thù lao' : parsed.financeTitle,
+          contactPhone: contactPhoneClean,
+          contactEmail: contactEmailClean,
+          managerSignatureImg: signatureClean,
+          showSignatures: parsed.showSignatures !== undefined ? parsed.showSignatures : true,
         };
       } catch (e) {}
     }

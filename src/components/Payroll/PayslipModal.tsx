@@ -432,7 +432,7 @@ Cảm ơn bạn đã đồng hành và hỗ trợ Lớp Ôn Thi HSGQG Sinh Học
           <div
             id="printable-payslip-content"
             style={{ fontFamily: "'Times New Roman', Times, 'Liberation Serif', serif" }}
-            className="print-container payslip-times-roman bg-white w-full max-w-[780px] p-5 sm:p-7 shadow-sm sm:rounded-xl border border-slate-300 text-slate-900 font-serif leading-normal my-auto"
+            className="print-container payslip-times-roman bg-white w-full max-w-[780px] p-5 sm:p-7 text-slate-900 font-serif leading-normal my-auto"
           >
             
             {/* Title Header */}
@@ -1043,7 +1043,7 @@ Cảm ơn bạn đã đồng hành và hỗ trợ Lớp Ôn Thi HSGQG Sinh Học
             })()}
 
             {/* Signatures Area */}
-            <div className="grid grid-cols-2 gap-8 text-center pt-8 break-inside-avoid print:break-inside-avoid" style={{ pageBreakInside: 'avoid', breakInside: 'avoid' }}>
+            <div className="signature-container grid grid-cols-2 gap-8 text-center pt-8 break-inside-avoid print:break-inside-avoid" style={{ pageBreakInside: 'avoid', breakInside: 'avoid' }}>
               
               {/* Employee Column */}
               <div className="flex flex-col items-center justify-between min-h-[160px]">
@@ -1065,15 +1065,25 @@ Cảm ơn bạn đã đồng hành và hỗ trợ Lớp Ôn Thi HSGQG Sinh Học
               <div className="flex flex-col items-center justify-between min-h-[160px]">
                 <div>
                   <p className="font-bold text-xs sm:text-sm uppercase tracking-wider text-slate-700 mb-1">
-                    {orgSettings.managerTitle || 'NGƯỜI THUÊ & CHI TRẢ (CÁ NHÂN)'}
+                    {orgSettings.managerTitle || 'NGƯỜI THUÊ & CHI TRẢ'}
                   </p>
                   <p className="text-xs sm:text-sm italic text-slate-500">
                     (Đã duyệt & chi trả thù lao)
                   </p>
                 </div>
-                <div className="h-16"></div> {/* Whitespace for signing */}
+                <div className="h-16 flex items-center justify-center">
+                  {orgSettings?.showSignatures !== false && (currentData.signatures?.managerSignatureImg || orgSettings?.managerSignatureImg) ? (
+                    <img
+                      src={currentData.signatures?.managerSignatureImg || orgSettings?.managerSignatureImg}
+                      alt="Chữ ký Trần Hạnh Dung"
+                      className="max-h-16 max-w-[180px] object-contain pointer-events-none select-none drop-shadow-2xs"
+                    />
+                  ) : (
+                    <div className="h-16"></div>
+                  )}
+                </div>
                 <p className="font-bold text-sm sm:text-base text-black">
-                  {cleanPersonName(orgSettings.managerName, 'Đại Diện Lớp')}
+                  {cleanPersonName(orgSettings.managerName, 'Trần Hạnh Dung')}
                 </p>
               </div>
 
@@ -1240,7 +1250,7 @@ Cảm ơn bạn đã đồng hành và hỗ trợ Lớp Ôn Thi HSGQG Sinh Học
 
                       {/* Signature row for Evaluation Sheet */}
                       <div 
-                        className="grid grid-cols-2 gap-8 text-center pt-8 break-inside-avoid print:break-inside-avoid"
+                        className="signature-container grid grid-cols-2 gap-8 text-center pt-8 break-inside-avoid print:break-inside-avoid"
                         style={{ pageBreakInside: 'avoid', breakInside: 'avoid' }}
                       >
                         <div className="flex flex-col items-center justify-between min-h-[150px]">
@@ -1256,13 +1266,23 @@ Cảm ơn bạn đã đồng hành và hỗ trợ Lớp Ôn Thi HSGQG Sinh Học
                         <div className="flex flex-col items-center justify-between min-h-[150px]">
                           <div>
                             <p className="font-bold text-xs uppercase tracking-wider text-slate-700 mb-1">
-                              {orgSettings.managerTitle || 'CÁ NHÂN PHỤ TRÁCH LỚP'}
+                              {orgSettings.managerTitle ? orgSettings.managerTitle.toUpperCase() : 'NGƯỜI THUÊ / PHỤ TRÁCH'}
                             </p>
                             <p className="text-[11px] italic text-slate-500">(Ký và duyệt)</p>
                           </div>
-                          <div className="h-14"></div> {/* Whitespace for signing */}
+                          <div className="h-14 flex items-center justify-center">
+                            {orgSettings?.showSignatures !== false && (currentData.signatures?.managerSignatureImg || orgSettings?.managerSignatureImg) ? (
+                              <img
+                                src={currentData.signatures?.managerSignatureImg || orgSettings?.managerSignatureImg}
+                                alt="Chữ ký Trần Hạnh Dung"
+                                className="max-h-14 max-w-[160px] object-contain pointer-events-none select-none drop-shadow-2xs"
+                              />
+                            ) : (
+                              <div className="h-14"></div>
+                            )}
+                          </div>
                           <p className="font-bold text-sm text-black">
-                            {cleanPersonName(evalRec.evaluatorName || orgSettings.managerName, 'Đại Diện Lớp')}
+                            {cleanPersonName(evalRec.evaluatorName || orgSettings.managerName, 'Trần Hạnh Dung')}
                           </p>
                         </div>
                       </div>

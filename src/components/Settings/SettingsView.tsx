@@ -16,9 +16,11 @@ import {
   Coins, 
   Phone, 
   Mail, 
-  MapPin 
+  MapPin,
+  PenTool
 } from 'lucide-react';
 import { ClearSheetDataModal } from '../Common/ClearSheetDataModal';
+import { SignaturePad } from './SignaturePad';
 
 export const SettingsView: React.FC = () => {
   const { 
@@ -37,15 +39,16 @@ export const SettingsView: React.FC = () => {
   const [formData, setFormData] = useState<OrgSettings>({
     orgName: orgSettings.orgName ?? '',
     location: orgSettings.location ?? '',
-    managerTitle: orgSettings.managerTitle ?? '',
-    managerName: orgSettings.managerName ?? '',
+    managerTitle: orgSettings.managerTitle ?? 'Người thuê',
+    managerName: orgSettings.managerName ?? 'Trần Hạnh Dung',
     contactPhone: orgSettings.contactPhone ?? '',
     contactEmail: orgSettings.contactEmail ?? '',
-    currencySymbol: orgSettings.currencySymbol ?? '',
+    currencySymbol: orgSettings.currencySymbol ?? 'VNĐ',
     defaultWorkingDaysInMonth: orgSettings.defaultWorkingDaysInMonth ?? 26,
-    financeTitle: orgSettings.financeTitle ?? '',
-    financeName: orgSettings.financeName ?? '',
-    showSignatures: false,
+    financeTitle: orgSettings.financeTitle ?? 'Người chi trả thù lao',
+    financeName: orgSettings.financeName ?? 'Trần Hạnh Dung',
+    managerSignatureImg: orgSettings.managerSignatureImg,
+    showSignatures: orgSettings.showSignatures !== false,
   });
 
   const [saved, setSaved] = useState(false);
@@ -56,15 +59,16 @@ export const SettingsView: React.FC = () => {
     setFormData({
       orgName: orgSettings.orgName ?? '',
       location: orgSettings.location ?? '',
-      managerTitle: orgSettings.managerTitle ?? '',
-      managerName: orgSettings.managerName ?? '',
+      managerTitle: orgSettings.managerTitle ?? 'Người thuê',
+      managerName: orgSettings.managerName ?? 'Trần Hạnh Dung',
       contactPhone: orgSettings.contactPhone ?? '',
       contactEmail: orgSettings.contactEmail ?? '',
-      currencySymbol: orgSettings.currencySymbol ?? '',
+      currencySymbol: orgSettings.currencySymbol ?? 'VNĐ',
       defaultWorkingDaysInMonth: orgSettings.defaultWorkingDaysInMonth ?? 26,
-      financeTitle: orgSettings.financeTitle ?? '',
-      financeName: orgSettings.financeName ?? '',
-      showSignatures: false,
+      financeTitle: orgSettings.financeTitle ?? 'Người chi trả thù lao',
+      financeName: orgSettings.financeName ?? 'Trần Hạnh Dung',
+      managerSignatureImg: orgSettings.managerSignatureImg,
+      showSignatures: orgSettings.showSignatures !== false,
     });
   }, [orgSettings]);
 
@@ -72,13 +76,58 @@ export const SettingsView: React.FC = () => {
     e.preventDefault();
     updateOrgSettings({
       ...formData,
-      financeTitle: formData.managerTitle,
-      financeName: formData.managerName,
-      showSignatures: false,
+      financeTitle: formData.financeTitle || formData.managerTitle,
+      financeName: formData.financeName || formData.managerName,
+      showSignatures: formData.showSignatures,
     });
     setSaved(true);
     showToast('Đã lưu cấu hình thông tin thành công!', 'success');
     setTimeout(() => setSaved(false), 3000);
+  };
+
+  const handleSaveSignature = (signatureDataUrl: string) => {
+    const updated = {
+      ...formData,
+      managerSignatureImg: signatureDataUrl,
+      showSignatures: true,
+    };
+    setFormData(updated);
+    updateOrgSettings(updated);
+    showToast('Đã lưu và áp dụng chữ ký điện tử của Trần Hạnh Dung thành công!', 'success');
+  };
+
+  const handleToggleShowSignatures = (show: boolean) => {
+    const updated = {
+      ...formData,
+      showSignatures: show,
+    };
+    setFormData(updated);
+    updateOrgSettings(updated);
+    showToast(
+      show 
+        ? 'Đã bật hiển thị chữ ký điện tử trên Hợp đồng, Bảng thù lao và Thông báo' 
+        : 'Đã tắt hiển thị chữ ký điện tử (để trống khi in ký tay)', 
+      'info'
+    );
+  };
+
+  const handleClearSignature = () => {
+    showConfirm({
+      title: 'Xóa chữ ký điện tử?',
+      message: 'Bạn có chắc chắn muốn xóa chữ ký điện tử hiện tại của Trần Hạnh Dung không? Khi in văn bản sẽ để trống khoảng ký tên.',
+      confirmText: 'Xóa chữ ký',
+      cancelText: 'Giữ lại',
+      variant: 'warning',
+      onConfirm: () => {
+        const updated = {
+          ...formData,
+          managerSignatureImg: '',
+        };
+        setFormData(updated);
+        updateOrgSettings(updated);
+        showToast('Đã xóa chữ ký điện tử.', 'info');
+      },
+    });
   };
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -165,38 +214,44 @@ export const SettingsView: React.FC = () => {
             </div>
           </div>
 
-          {/* Section 2: Người Đại Diện & Chi Trả */}
+          {/* Section 2: Người Thuê & Chi Trả */}
           <div className="space-y-3">
             <div className="flex items-center gap-2 text-xs font-bold text-slate-900 uppercase tracking-wide">
               <UserCheck className="w-4 h-4 text-teal-700" />
-              <span>2. Người Đại Diện Lớp / Phụ Trách Giao Việc & Chi Trả</span>
+              <span>2. Người Thuê Giao Việc & Chi Trả Thù Lao (Bên A)</span>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-slate-50 p-4 rounded-xl border border-slate-200">
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1">
-                  Chức Danh / Danh Xưng Đại Diện:
+                  Tư Cách / Chức Danh Bên A (Giao việc):
                 </label>
                 <input
                   type="text"
                   value={formData.managerTitle}
                   onChange={e => setFormData({ ...formData, managerTitle: e.target.value })}
                   className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-xs sm:text-sm font-bold text-slate-900 focus:ring-1 focus:ring-slate-900 focus:outline-none"
-                  placeholder="VD: ĐẠI DIỆN LỚP hoặc PHỤ TRÁCH LỚP"
+                  placeholder="VD: Người thuê"
                 />
+                <p className="text-[11px] text-slate-400 mt-1">
+                  Hiện là "Người thuê" (cá nhân thuê cá nhân trên hợp đồng khoán việc)
+                </p>
               </div>
 
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1">
-                  Họ và Tên Người Đại Diện:
+                  Họ và Tên Người Giao Việc (Bên A):
                 </label>
                 <input
                   type="text"
                   value={formData.managerName}
                   onChange={e => setFormData({ ...formData, managerName: e.target.value })}
                   className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-xs sm:text-sm font-bold text-slate-900 focus:ring-1 focus:ring-slate-900 focus:outline-none"
-                  placeholder="VD: Đại Diện Lớp"
+                  placeholder="VD: Trần Hạnh Dung"
                 />
+                <p className="text-[11px] text-slate-400 mt-1">
+                  Tên người ký duyệt và chịu trách nhiệm trực tiếp
+                </p>
               </div>
 
               <div>
@@ -209,7 +264,7 @@ export const SettingsView: React.FC = () => {
                   value={formData.contactPhone || ''}
                   onChange={e => setFormData({ ...formData, contactPhone: e.target.value })}
                   className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-xs sm:text-sm text-slate-800 focus:ring-1 focus:ring-slate-900 focus:outline-none font-mono"
-                  placeholder="VD: 0912 345 678"
+                  placeholder="Để trống nếu muốn điền tay sau khi in"
                 />
               </div>
 
@@ -223,17 +278,33 @@ export const SettingsView: React.FC = () => {
                   value={formData.contactEmail || ''}
                   onChange={e => setFormData({ ...formData, contactEmail: e.target.value })}
                   className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-xs sm:text-sm text-slate-800 focus:ring-1 focus:ring-slate-900 focus:outline-none"
-                  placeholder="VD: hsgqg.sinhhoc@gmail.com"
+                  placeholder="Để trống nếu muốn điền tay sau khi in"
                 />
               </div>
             </div>
           </div>
 
-          {/* Section 3: Quy Chuẩn Tính Lương & Chấm Công */}
+          {/* Section 3: Chữ Ký Điện Tử Của Trần Hạnh Dung */}
+          <div className="space-y-3">
+            <div className="flex items-center gap-2 text-xs font-bold text-slate-900 uppercase tracking-wide">
+              <PenTool className="w-4 h-4 text-indigo-700" />
+              <span>3. Cấu Hình Chữ Ký Điện Tử (Trần Hạnh Dung)</span>
+            </div>
+
+            <SignaturePad
+              currentSignature={formData.managerSignatureImg}
+              showSignatures={formData.showSignatures !== false}
+              onSaveSignature={handleSaveSignature}
+              onToggleShowSignatures={handleToggleShowSignatures}
+              onClearSignature={handleClearSignature}
+            />
+          </div>
+
+          {/* Section 4: Quy Chuẩn Tính Lương & Chấm Công */}
           <div className="space-y-3">
             <div className="flex items-center gap-2 text-xs font-bold text-slate-900 uppercase tracking-wide">
               <Coins className="w-4 h-4 text-amber-600" />
-              <span>3. Quy Chuẩn Tính Công & Tiền Tệ</span>
+              <span>4. Quy Chuẩn Tính Công & Tiền Tệ</span>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-slate-50 p-4 rounded-xl border border-slate-200">

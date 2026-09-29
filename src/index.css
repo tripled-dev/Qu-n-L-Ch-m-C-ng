@@ -36,12 +36,30 @@
   }
 
   .print-page-break {
-    page-break-before: always;
+    page-break-before: always !important;
+    break-before: page !important;
+  }
+
+  .break-inside-avoid,
+  .print-break-inside-avoid,
+  tr,
+  table,
+  .signature-container,
+  .kpi-table-section {
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+  }
+
+  h1, h2, h3, h4 {
+    break-after: avoid !important;
+    page-break-after: avoid !important;
   }
 
   .print-container {
     box-shadow: none !important;
     border: none !important;
+    border-radius: 0 !important;
+    outline: none !important;
     margin: 0 !important;
     padding: 0 !important;
     max-width: 100% !important;

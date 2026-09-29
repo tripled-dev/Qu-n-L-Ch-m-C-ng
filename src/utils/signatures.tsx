@@ -54,7 +54,7 @@ export const FinanceSignatureSvg: React.FC<{ className?: string }> = ({ classNam
       opacity="0.95"
       letterSpacing="0.5"
     >
-      Đại Diện Lớp
+      Trần Hạnh Dung
     </text>
   </svg>
 );

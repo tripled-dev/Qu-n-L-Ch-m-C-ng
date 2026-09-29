@@ -569,11 +569,11 @@ export const StaffManager: React.FC = () => {
 
                 <button
                   onClick={() => setContractStaff(staff)}
-                  className="inline-flex items-center justify-center gap-1 py-1.5 px-2 text-xs font-semibold text-teal-800 bg-teal-50 hover:bg-teal-100 rounded-lg transition-colors cursor-pointer border border-teal-200 whitespace-nowrap"
-                  title="Xem bản thống nhất công việc & mức thù lao"
+                  className="inline-flex items-center justify-center gap-1 py-1.5 px-2 text-xs font-semibold text-indigo-800 bg-indigo-50 hover:bg-indigo-100 rounded-lg transition-colors cursor-pointer border border-indigo-200 whitespace-nowrap"
+                  title="Xem & in Hợp đồng khoán việc cá nhân"
                 >
                   <FileText className="w-3.5 h-3.5 shrink-0" />
-                  <span>Thống Nhất</span>
+                  <span>Hợp Đồng</span>
                 </button>
 
                 <button

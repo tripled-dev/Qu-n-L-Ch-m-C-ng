@@ -21,6 +21,7 @@ export interface StaffDutiesRates {
   // 1. Buổi dạy học (Giảng viên)
   teachingEnabled?: boolean;
   teachingRate?: number; // Đơn giá mỗi buổi dạy (VNĐ)
+  teachingTiers?: CustomRateTier[]; // Tùy biến đơn giá dạy học theo từng lớp/nhóm
 
   // 2. Buổi trợ giảng (Trợ giảng)
   tutoringEnabled?: boolean;
@@ -35,6 +36,9 @@ export interface StaffDutiesRates {
   // 4. Ngày công (Trợ lý)
   dayWorkEnabled?: boolean;
   dayWorkRate?: number; // Đơn giá mỗi ngày công (VNĐ)
+
+  // 5. Các đầu việc / đơn giá riêng khác
+  customTiers?: { id: string; name: string; unit?: string; rate: number }[];
 }
 
 export interface StaffRoleMeta {
@@ -59,8 +63,12 @@ export interface Staff {
   id: string;
   code: string; // Mã NV (e.g. TD-0507)
   fullName: string;
+  birthDate?: string; // Ngày tháng năm sinh
+  address?: string; // Địa chỉ cư trú / liên hệ
   citizenId?: string; // Số CCCD / Căn cước công dân
   cccd?: string; // Đồng bộ alias
+  citizenIssueDate?: string; // Ngày cấp CCCD
+  citizenIssuePlace?: string; // Nơi cấp CCCD
   role: string; // Chức danh hiển thị
   roleType?: StaffRoleType;
   roles?: StaffRoleType[]; // Hỗ trợ kiêm nhiệm nhiều vai trò (GV, TG, CT, TL)
