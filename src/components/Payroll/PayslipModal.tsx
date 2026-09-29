@@ -73,13 +73,14 @@ export const PayslipModal: React.FC<PayslipModalProps> = ({ slip, onClose }) => 
 
   // Sync edits
   const handleSave = () => {
-    // Recalculate totals
+    // Recalculate totals cleanly
+    const bonusVal = Number(editedSlip.generalBonus || editedSlip.primarySalary.bonus || 0);
     const primaryTotal =
       Math.round(
         editedSlip.primarySalary.daysOrSessions *
           editedSlip.primarySalary.unitPrice *
           (editedSlip.primarySalary.kpiPercent / 100)
-      ) + Number(editedSlip.primarySalary.bonus || 0);
+      );
 
     const updatedPiecework = editedSlip.pieceworkItems.map(item => ({
       ...item,
@@ -92,7 +93,7 @@ export const PayslipModal: React.FC<PayslipModalProps> = ({ slip, onClose }) => 
     const totalSalary =
       primaryTotal +
       pwTotal +
-      Number(editedSlip.generalBonus || 0) +
+      bonusVal +
       Number(editedSlip.allowances || 0) -
       Number(editedSlip.deductions || 0);
 
@@ -100,8 +101,10 @@ export const PayslipModal: React.FC<PayslipModalProps> = ({ slip, onClose }) => 
       ...editedSlip,
       primarySalary: {
         ...editedSlip.primarySalary,
+        bonus: 0,
         totalAmount: primaryTotal,
       },
+      generalBonus: bonusVal,
       pieceworkItems: updatedPiecework,
       totalSalary,
       updatedAt: new Date().toISOString(),
@@ -656,25 +659,32 @@ Cảm ơn bạn đã đồng hành và hỗ trợ Lớp Ôn Thi HSGQG Sinh Học
                           <input
                             type="number"
                             step="10000"
-                            value={editedSlip.primarySalary.bonus}
-                            onChange={e =>
+                            value={editedSlip.generalBonus || editedSlip.primarySalary.bonus || ''}
+                            placeholder="0"
+                            onChange={e => {
+                              const val = Number(e.target.value) || 0;
                               setEditedSlip({
                                 ...editedSlip,
+                                generalBonus: val,
                                 primarySalary: {
                                   ...editedSlip.primarySalary,
-                                  bonus: Number(e.target.value),
+                                  bonus: 0,
                                 },
-                              })
-                            }
-                            className="w-24 text-right border border-slate-300 rounded p-1"
+                              });
+                            }}
+                            className="w-24 text-right border border-slate-300 rounded p-1 font-bold text-xs sm:text-sm"
                           />
                         ) : (
-                          currentData.primarySalary.bonus > 0 ? formatVND(currentData.primarySalary.bonus) : '—'
+                          (currentData.generalBonus || currentData.primarySalary.bonus || 0) > 0 
+                            ? formatVND(currentData.generalBonus || currentData.primarySalary.bonus || 0) 
+                            : '—'
                         )}
                       </td>
                       <td className="border-r border-black p-2.5 bg-slate-300"></td>
                       <td className="p-2.5 text-right pr-3 font-medium">
-                        {currentData.primarySalary.bonus > 0 ? formatVND(currentData.primarySalary.bonus) : '—'}
+                        {(currentData.generalBonus || currentData.primarySalary.bonus || 0) > 0 
+                          ? formatVND(currentData.generalBonus || currentData.primarySalary.bonus || 0) 
+                          : '—'}
                       </td>
                     </tr>
 
@@ -845,25 +855,32 @@ Cảm ơn bạn đã đồng hành và hỗ trợ Lớp Ôn Thi HSGQG Sinh Học
                           <input
                             type="number"
                             step="10000"
-                            value={editedSlip.primarySalary.bonus}
-                            onChange={e =>
+                            value={editedSlip.generalBonus || editedSlip.primarySalary.bonus || ''}
+                            placeholder="0"
+                            onChange={e => {
+                              const val = Number(e.target.value) || 0;
                               setEditedSlip({
                                 ...editedSlip,
+                                generalBonus: val,
                                 primarySalary: {
                                   ...editedSlip.primarySalary,
-                                  bonus: Number(e.target.value),
+                                  bonus: 0,
                                 },
-                              })
-                            }
-                            className="w-24 text-right border border-slate-300 rounded p-1"
+                              });
+                            }}
+                            className="w-24 text-right border border-slate-300 rounded p-1 font-bold text-xs sm:text-sm"
                           />
                         ) : (
-                          currentData.primarySalary.bonus > 0 ? formatVND(currentData.primarySalary.bonus) : '—'
+                          (currentData.generalBonus || currentData.primarySalary.bonus || 0) > 0 
+                            ? formatVND(currentData.generalBonus || currentData.primarySalary.bonus || 0) 
+                            : '—'
                         )}
                       </td>
                       <td className="border-r border-black p-2.5 bg-slate-300"></td>
                       <td className="p-2.5 text-right pr-3 font-medium">
-                        {currentData.primarySalary.bonus > 0 ? formatVND(currentData.primarySalary.bonus) : '0'}
+                        {(currentData.generalBonus || currentData.primarySalary.bonus || 0) > 0 
+                          ? formatVND(currentData.generalBonus || currentData.primarySalary.bonus || 0) 
+                          : '0'}
                       </td>
                     </tr>
                   </tbody>

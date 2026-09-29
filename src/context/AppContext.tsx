@@ -622,8 +622,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
       // 5. THƯỞNG
       const bonusLogs = staffTimesheets.filter(t => t.type === 'bonus');
-      const bonusFromTs = bonusLogs.reduce((sum, t) => sum + (t.quantity * t.rate || t.rate || t.quantity), 0);
-      const generalBonus = (existingSlip?.generalBonus ?? 0) + bonusFromTs;
+      const bonusFromTs = bonusLogs.reduce((sum, t) => sum + (t.quantity * (t.rate || 1)), 0);
+      const generalBonus = bonusLogs.length > 0 
+        ? bonusFromTs 
+        : (existingSlip?.generalBonus ?? existingSlip?.primarySalary?.bonus ?? 0);
+      const bonusReason = bonusLogs.length > 0
+        ? (bonusLogs[0].note || bonusLogs[0].label || 'Thưởng')
+        : (existingSlip?.bonusReason || 'Thưởng');
 
       // Primary salary selection aligned strictly with 5 items
       let primaryName = '1. Lương dạy học';

@@ -342,7 +342,8 @@ export const PayrollList: React.FC = () => {
                   const tut = b?.tutoring;
                   const grd = b?.grading;
                   const day = b?.dayWork;
-                  const bon = (slip.generalBonus || 0) + (slip.allowances || 0) - (slip.deductions || 0);
+                  const totalBonus = (slip.generalBonus || 0) + (slip.primarySalary?.bonus || 0);
+                  const bon = totalBonus + (slip.allowances || 0) - (slip.deductions || 0);
 
                   return (
                     <tr key={slip.id} className="hover:bg-slate-50 transition-colors">
@@ -423,7 +424,9 @@ export const PayrollList: React.FC = () => {
                               {bon > 0 ? `+${formatVND(bon)}` : formatVND(bon)} đ
                             </div>
                             <div className="text-[10px] text-slate-500 whitespace-nowrap">
-                              {slip.generalBonus > 0 ? 'Thưởng ' : ''}{slip.deductions > 0 ? `Trừ ${formatVND(slip.deductions)}` : ''}
+                              {totalBonus > 0 ? `Thưởng ${formatVND(totalBonus)}` : ''}
+                              {totalBonus > 0 && slip.deductions > 0 ? ' • ' : ''}
+                              {slip.deductions > 0 ? `Trừ ${formatVND(slip.deductions)}` : ''}
                             </div>
                           </div>
                         ) : (

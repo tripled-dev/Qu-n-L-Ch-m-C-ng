@@ -110,11 +110,12 @@ export const TimesheetManager: React.FC = () => {
       const tutoringQty = tutoringLogs.reduce((sum, t) => sum + t.quantity, 0);
       const gradingQty = gradingLogs.reduce((sum, t) => sum + t.quantity, 0);
       const dayWorkQty = dayWorkLogs.reduce((sum, t) => sum + t.quantity, 0);
-      const bonusQty = bonusLogs.reduce((sum, t) => sum + (t.quantity * t.rate || t.rate || t.quantity), 0);
+      const bonusQty = bonusLogs.reduce((sum, t) => sum + (t.quantity * (t.rate || 1)), 0);
 
-      // Existing slip bonus
+      // Existing slip bonus without double-counting
       const existingSlip = payrollSlips.find(p => (p.staffId === staff.id || (staff.code && p.staffCode === staff.code)) && (p.month || '').trim().substring(0, 7) === normCurMonth);
-      const totalBonus = (existingSlip?.generalBonus ?? 0) + bonusQty;
+      const totalBonus = bonusLogs.length > 0 ? bonusQty : (existingSlip?.generalBonus ?? existingSlip?.primarySalary?.bonus ?? 0);
+      const bonusReason = bonusLogs.length > 0 ? (bonusLogs[0].note || bonusLogs[0].label || '') : (existingSlip?.bonusReason || '');
 
       // Evaluation info
       const staffEvaluations = evaluations.filter(e => (e.staffId === staff.id || (staff.code && e.staffId === staff.code)) && (e.month || '').trim().substring(0, 7) === normCurMonth);
@@ -239,6 +240,7 @@ export const TimesheetManager: React.FC = () => {
         gradingTiersData,
         dayWorkQty,
         totalBonus,
+        bonusReason,
         totalEstimatedPay,
         kpiScoresMap,
         hasEvaluation: staffEvaluations.length > 0,
@@ -279,7 +281,10 @@ export const TimesheetManager: React.FC = () => {
     // Find logs that precisely match the target rate
     const normCurMonth = (currentMonth || '').trim().substring(0, 7);
     const existingLogs = timesheetEntries.filter(
-      t => t.staffId === staff.id && (t.month || '').trim().substring(0, 7) === normCurMonth && t.type === type && t.rate === targetRate
+      t => (t.staffId === staff.id || (staff.code && t.staffId === staff.code)) &&
+           (t.month || '').trim().substring(0, 7) === normCurMonth &&
+           t.type === type &&
+           t.rate === targetRate
     );
 
     if (existingLogs.length > 0) {
@@ -307,6 +312,55 @@ export const TimesheetManager: React.FC = () => {
         unit: targetUnit,
         rate: targetRate,
         kpiScore: 100
+      });
+    }
+
+    setTimeout(() => {
+      generateMonthlyPayrollForStaff(currentMonth);
+    }, 150);
+  };
+
+  // Handle direct inline bonus amount adjustments precisely
+  const handleInlineBonusChange = (staff: Staff, newAmount: number, reason?: string) => {
+    const targetAmount = Math.max(0, newAmount);
+    const normCurMonth = (currentMonth || '').trim().substring(0, 7);
+    
+    const existingBonusLogs = timesheetEntries.filter(
+      t => (t.staffId === staff.id || (staff.code && t.staffId === staff.code)) &&
+           (t.month || '').trim().substring(0, 7) === normCurMonth &&
+           t.type === 'bonus'
+    );
+
+    const defaultReason = reason || existingBonusLogs[0]?.note || existingBonusLogs[0]?.label || `Thưởng tháng ${formatMonthDisplay(currentMonth)}`;
+
+    if (targetAmount === 0) {
+      existingBonusLogs.forEach(log => {
+        deleteTimesheetEntry(log.id);
+      });
+    } else if (existingBonusLogs.length > 0) {
+      updateTimesheetEntry({
+        ...existingBonusLogs[0],
+        quantity: 1,
+        rate: targetAmount,
+        unit: 'VNĐ',
+        label: defaultReason,
+        note: defaultReason,
+      });
+      for (let i = 1; i < existingBonusLogs.length; i++) {
+        deleteTimesheetEntry(existingBonusLogs[i].id);
+      }
+    } else {
+      addTimesheetEntry({
+        staffId: staff.id,
+        month: currentMonth,
+        date: `${currentMonth}-15`,
+        type: 'bonus',
+        label: defaultReason,
+        quantity: 1,
+        unit: 'VNĐ',
+        rate: targetAmount,
+        kpiScore: 100,
+        note: defaultReason,
       });
     }
 
@@ -344,6 +398,13 @@ export const TimesheetManager: React.FC = () => {
       return result;
     };
 
+    const bonusAmount = bonusLogs.length > 0 
+      ? bonusLogs.reduce((sum, t) => sum + (t.quantity * (t.rate || 1)), 0)
+      : (existingSlip?.generalBonus ?? existingSlip?.primarySalary?.bonus ?? 0);
+    const bonusReason = bonusLogs.length > 0 
+      ? (bonusLogs[0].note || bonusLogs[0].label || '') 
+      : (existingSlip?.bonusReason || '');
+
     setBulkFormData({
       teachingSessions: teachingLogs.reduce((sum, t) => sum + t.quantity, 0),
       teachingRate: rates.teachingRate,
@@ -351,8 +412,8 @@ export const TimesheetManager: React.FC = () => {
       gradingTiers: groupLogsByTier(gradingLogs, hasStaffRole(staff, 'soan_de_thi') ? 'Đề' : 'Bài', rates.gradingRate, hasStaffRole(staff, 'soan_de_thi') ? `Soạn đề thi tháng ${formatMonthDisplay(currentMonth)}` : `Chấm thi tháng ${formatMonthDisplay(currentMonth)}`, rates.gradingTiers || []),
       dayWorkCount: dayWorkLogs.reduce((sum, t) => sum + t.quantity, 0),
       dayWorkRate: rates.dayWorkRate,
-      bonusAmount: (existingSlip?.generalBonus || 0) + bonusLogs.reduce((sum, t) => sum + (t.quantity * t.rate || t.rate || t.quantity), 0),
-      bonusReason: existingSlip?.bonusReason || '',
+      bonusAmount,
+      bonusReason,
       note: `Cập nhật khối lượng công việc tháng ${formatMonthDisplay(currentMonth)}`,
     });
   };
@@ -422,9 +483,9 @@ export const TimesheetManager: React.FC = () => {
     if (bulkFormData.bonusAmount > 0) {
       items.push({
         type: 'bonus',
-        label: bulkFormData.bonusReason || `Thưởng hiệu suất tháng ${formatMonthDisplay(currentMonth)}`,
+        label: bulkFormData.bonusReason || `Thưởng tháng ${formatMonthDisplay(currentMonth)}`,
         quantity: 1,
-        unit: 'Lần',
+        unit: 'VNĐ',
         rate: Number(bulkFormData.bonusAmount),
         note: bulkFormData.bonusReason,
       });
@@ -662,7 +723,7 @@ export const TimesheetManager: React.FC = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 font-medium text-slate-800">
-                  {filteredMatrix.map(({ staff, roleMeta, assignedChecklists, isTeacher, isTutor, isGrader, isAssistant, isExamCrafter, teachingQty, tutoringQty, gradingQty, dayWorkQty, totalBonus, totalEstimatedPay, kpiScoresMap, tutoringTiersData, gradingTiersData, rates }) => (
+                  {filteredMatrix.map(({ staff, roleMeta, assignedChecklists, isTeacher, isTutor, isGrader, isAssistant, isExamCrafter, teachingQty, tutoringQty, gradingQty, dayWorkQty, totalBonus, bonusReason, totalEstimatedPay, kpiScoresMap, tutoringTiersData, gradingTiersData, rates }) => (
                     <tr key={staff.id} className="hover:bg-slate-50/80 transition-colors">
                       
                       {/* Staff & Role with Short Tag */}
@@ -851,9 +912,41 @@ export const TimesheetManager: React.FC = () => {
 
                       {/* 5. Bonus */}
                       <td className="py-2 px-2 text-center bg-rose-50/20">
-                        <span className="font-mono text-xs font-bold text-rose-700">
-                          {totalBonus > 0 ? `${formatVND(totalBonus)} đ` : '0 đ'}
-                        </span>
+                        <div className="flex flex-col items-center justify-center gap-1">
+                          <div className="inline-flex items-center justify-center border border-rose-200 rounded-lg bg-white overflow-hidden shadow-2xs">
+                            <button
+                              type="button"
+                              onClick={() => handleInlineBonusChange(staff, Math.max(0, totalBonus - 50000), bonusReason)}
+                              className="w-5 h-7 text-slate-400 hover:text-rose-700 hover:bg-rose-50 flex items-center justify-center font-bold text-xs cursor-pointer border-r border-rose-100"
+                              title="Giảm 50.000 đ"
+                            >
+                              -
+                            </button>
+                            <input
+                              type="number"
+                              step="10000"
+                              min="0"
+                              value={totalBonus === 0 ? '' : totalBonus}
+                              placeholder="0"
+                              onChange={e => handleInlineBonusChange(staff, parseInt(e.target.value) || 0, bonusReason)}
+                              className="w-20 h-7 text-center font-mono font-bold text-xs text-rose-700 focus:outline-none focus:bg-rose-50/50"
+                              title="Nhập số tiền thưởng (VNĐ)"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => handleInlineBonusChange(staff, totalBonus + 50000, bonusReason)}
+                              className="w-5 h-7 text-slate-400 hover:text-rose-700 hover:bg-rose-50 flex items-center justify-center font-bold text-xs cursor-pointer border-l border-rose-100"
+                              title="Tăng 50.000 đ"
+                            >
+                              +
+                            </button>
+                          </div>
+                          {totalBonus > 0 && (
+                            <div className="text-[9px] font-bold text-rose-600 truncate max-w-[95px]" title={bonusReason || 'Thưởng'}>
+                              {formatVND(totalBonus)} đ
+                            </div>
+                          )}
+                        </div>
                       </td>
 
                       {/* Estimated Total */}
